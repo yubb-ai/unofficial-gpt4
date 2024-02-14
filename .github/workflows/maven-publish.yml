@@ -17,8 +17,11 @@ jobs:
     - name: Set up GraalVM
       uses: DeLaGuardo/setup-graalvm@5.0
       with:
-        graalvm-version: '21.0.0.2' # 确保这个版本号是正确的，可能需要根据可用的版本进行调整
+        graalvm-version: '21.0.0.2'
         java-version: 'java17'
+
+    - name: Grant execute permission for mvnw
+      run: chmod +x ./mvnw
 
     - name: Set JAVA_HOME
       run: echo "JAVA_HOME=$(java -XshowSettings:properties -version 2>&1 > /dev/null | grep 'java.home' | awk '{print \\\$3}')" >> $GITHUB_ENV
@@ -30,4 +33,5 @@ jobs:
       run: mvn deploy -Pnative -s $GITHUB_WORKSPACE/settings.xml
       env:
         GITHUB_TOKEN: ${{ github.token }}
+
 
