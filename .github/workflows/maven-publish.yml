@@ -13,12 +13,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-
+    
     - name: Set up GraalVM
       uses: DeLaGuardo/setup-graalvm@5.0
       with:
-        graalvm-version: '21.0.0.2'
-        java-version: 'java17'
+        graalvm-version: '21.3' # 更新为支持 Java 17 的 GraalVM 版本
+        java-version: 'java17' # 确保 Java 版本符合你的需求
+
 
     - name: Grant execute permission for mvnw
       run: chmod +x ./mvnw
