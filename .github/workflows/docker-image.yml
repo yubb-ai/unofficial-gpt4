@@ -41,7 +41,7 @@ jobs:
         file: ./Dockerfiles/Dockerfile
         push: true
         tags: |
-          yangclivia/pandora-to-api:${{ steps.tag_name.outputs.tag }}
-          yangclivia/pandora-to-api:latest
+          yangclivia/spring-native-image:${{ steps.tag_name.outputs.tag }}
+          yangclivia/spring-native-image:latest
         platforms: linux/amd64,linux/arm64
         build-args: TARGETPLATFORM=${{ matrix.platform }}
