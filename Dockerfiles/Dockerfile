@@ -7,6 +7,9 @@ WORKDIR /build
 # Copy the source code into the image for building
 COPY . /build
 
+# Add execute permission to mvnw script
+RUN chmod +x mvnw
+
 # Build
 RUN ./mvnw --no-transfer-progress native:compile -Pnative
 
