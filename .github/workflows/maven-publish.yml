@@ -25,6 +25,9 @@ jobs:
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
+    - name: Set execute permissions for mvnw
+      run: chmod +x ./mvnw
+    
     - name: Build with Maven
       run: ./mvnw native:compile -Pnative
 
