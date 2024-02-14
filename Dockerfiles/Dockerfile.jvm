@@ -1,13 +1,13 @@
-# Using Oracle GraalVM for JDK 17
-FROM container-registry.oracle.com/graalvm/jdk:21-ol8
+# 基于Java 17的GraalVM构建镜像
+FROM container-registry.oracle.com/graalvm/jdk:21-ol8 as build
+WORKDIR /app
+COPY . /app
 
-# JAR file will be specified by passing in a build time argument to docker build
-ARG APP_FILE
+# 安装native-image工具
+RUN gu install native-image
 
-EXPOSE 8080
+# 使用Maven构建应用程序
+RUN mvn package -DskipTests
 
-# opy the JAR file into the root and rename
-COPY ./target/${APP_FILE} app.jar
-
-# Run java with the jar file when the container starts up
-CMD ["java","-jar","app.jar"]
+# 使用native-image编译成本地二进制文件
+RUN native-image -cp target/benchmark-jibber-0.0.1-SNAPSHOT.jar
