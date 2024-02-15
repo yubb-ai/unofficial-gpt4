@@ -1,5 +1,5 @@
 # 基于Java 17的GraalVM构建镜像
-FROM container-registry.oracle.com/graalvm/jdk:21-ol8 as build
+FROM container-registry.oracle.com/graalvm/native-image:21-ol8 AS builder
 WORKDIR /app
 COPY . /app
 
