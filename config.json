@@ -1,0 +1,6 @@
+{
+  "gpt3_sleepTime": 0,
+  "password": "abc",
+  "get_token_url": "https:\/\/api.cocopilot.org\/copilot_internal\/v2\/token",
+  "gpt4_sleepTime": 110
+}

@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gpt4.copilot.pojo.Result;
+import com.gpt4.copilot.pojo.systemSetting;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +12,6 @@ import okhttp3.*;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
@@ -56,16 +59,39 @@ public class chatController {
     private static final String machineId;
     private final static String get_cocopilotToken_url = "https://api.cocopilot.org/copilot_internal/v2/token";
 
+    /**
+     * gpt4单字符睡眠时间
+     */
+    private static Integer gpt4_sleepTime;
+
+    /**
+     * gpt3单字符睡眠时间
+     */
+    private static Integer gpt3_sleepTime;
+
+    /**
+     * 修改睡眠时间密码
+     */
+    private static String password;
+    /**
+     * 自定义获取token_url
+     */
+    private static String get_token_url;
+
     static {
         selfTokenList = new HashMap<>();
         copilotTokenList = new HashMap<>();
         coCopilotTokenList = new HashMap<>();
         machineId = generateMachineId();
+        systemSetting systemSetting = selectSetting();
+        setGpt4_sleepTime(systemSetting.getGpt4_sleepTime());
+        setGpt3_sleepTime(systemSetting.getGpt3_sleepTime());
+        setPassword(systemSetting.getPassword());
+        setGet_token_url(systemSetting.getGet_token_url());
         log.info("初始化接口成功！");
     }
 
     private final OkHttpClient client = new OkHttpClient.Builder().connectTimeout(3, TimeUnit.MINUTES).readTimeout(5, TimeUnit.MINUTES).writeTimeout(5, TimeUnit.MINUTES).build();
-
     private final ThreadFactory threadFactory = new ThreadFactory() {
         private final AtomicInteger counter = new AtomicInteger(0);
 
@@ -74,30 +100,109 @@ public class chatController {
             return new Thread(r, "chatThreadPool-" + counter.getAndIncrement());
         }
     };
-
     private final ExecutorService executor = new ThreadPoolExecutor(0, 300, 60L, TimeUnit.SECONDS, new SynchronousQueue<>(), threadFactory);
-
     private final String github_get_token_url = "https://api.github.com/copilot_internal/v2/token";
     private final String github_chat = "https://api.githubcopilot.com/chat/completions";
     private final String github_embaddings = "https://api.githubcopilot.com/embeddings";
     private final String vscode_version = "vscode/1.85.2";
+
+    public static String selectFile() {
+        String projectRoot = System.getProperty("user.dir");
+        String parent = projectRoot + File.separator + "config.json";
+        File jsonFile = new File(parent);
+        Path jsonFilePath = Paths.get(parent);
+        // 如果 JSON 文件不存在，创建一个新的 JSON 对象
+        if (!jsonFile.exists()) {
+            try {
+                // 创建文件config.json
+                Files.createFile(jsonFilePath);
+                // 往 config.json 文件中添加一个空数组，防止重启报错
+                Files.writeString(jsonFilePath, "{}");
+                System.out.println("空数组添加完成");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("config.json创建完成: " + jsonFilePath);
+        }
+        return parent;
+    }
+
+
+    public static void setGpt4_sleepTime(Integer gpt4_sleepTime) {
+        chatController.gpt4_sleepTime = gpt4_sleepTime;
+    }
+
+
+    public static void setGpt3_sleepTime(Integer gpt3_sleepTime) {
+        chatController.gpt3_sleepTime = gpt3_sleepTime;
+    }
+
+
+    public static void setGet_token_url(String get_token_url) {
+        chatController.get_token_url = get_token_url;
+    }
+
     /**
-     * gpt4单字符睡眠时间
+     * 查询config.json里的系统值
+     *
+     * @return systemSettings类
      */
-    @Value("${gpt4_sleepTime}")
-    private Integer gpt4_sleepTime;
-    /**
-     * gpt3单字符睡眠时间
-     */
-    @Value("${gpt3_sleepTime}")
-    private Integer gpt3_sleepTime;
-    /**
-     * 修改睡眠时间密码
-     */
-    @Value("${password}")
-    private String password;
-    @Value("${get_token_url}")
-    private String get_token_url;
+    public static systemSetting selectSetting() {
+        boolean exist = true;
+        String parent = selectFile();
+        try {
+            // 读取 JSON 文件内容
+            String jsonContent = new String(Files.readAllBytes(Paths.get(parent)));
+            // 将 JSON 字符串解析为 JSONObject
+            JSONObject jsonObject = new JSONObject(jsonContent);
+            try {
+                jsonObject.getInt("gpt4_sleepTime");
+            } catch (JSONException e) {
+                jsonObject.put("gpt4_sleepTime", "100");
+                log.info("config.json没有新增gpt4_sleepTime参数,现已增加！");
+                exist = false;
+            }
+            try {
+                jsonObject.getString("gpt3_sleepTime");
+            } catch (JSONException e) {
+                jsonObject.put("gpt3_sleepTime", "0");
+                log.info("config.json没有新增gpt3_sleepTime参数,现已增加！");
+                exist = false;
+            }
+            try {
+                jsonObject.getString("password");
+            } catch (JSONException e) {
+                jsonObject.put("password", UUID.randomUUID().toString());
+                log.info("config.json没有新增password参数,现已增加！");
+                exist = false;
+            }
+
+            try {
+                jsonObject.getString("get_token_url");
+            } catch (JSONException e) {
+                jsonObject.put("get_token_url", "https://api.cocopilot.org/copilot_internal/v2/token");
+                log.info("config.json没有新增get_token_url参数,现已增加！");
+                exist = false;
+            }
+
+            // 将 JSONObject 转换为 Config 类的实例
+            systemSetting config = new systemSetting();
+            config.setGpt4_sleepTime(jsonObject.optInt("gpt4_sleepTime"));
+            config.setGpt3_sleepTime(jsonObject.optInt("gpt3_sleepTime"));
+            config.setPassword(jsonObject.optString("password"));
+            config.setGet_token_url(jsonObject.optString("get_token_url"));
+
+            if (exist == false) {
+                // 将修改后的 JSONObject 转换为格式化的 JSON 字符串
+                String updatedJson = jsonObject.toString(2);
+                Files.write(Paths.get(parent), updatedJson.getBytes());
+            }
+            return config;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
     private static String generateMachineId() {
         try {
@@ -118,33 +223,39 @@ public class chatController {
         }
     }
 
-    public void setGpt4_sleepTime(Integer gpt4_sleepTime) {
-        this.gpt4_sleepTime = gpt4_sleepTime;
-    }
-
-    public void setGpt3_sleepTime(Integer gpt3_sleepTime) {
-        this.gpt3_sleepTime = gpt3_sleepTime;
-    }
-
-    public String getPassword() {
-        return password;
+    public static void setPassword(String password) {
+        chatController.password = password;
     }
 
     /**
      * 修改sleep时间
      */
-    @GetMapping(value = "changeSleepTime")
+    @GetMapping(value = "/changeSettings")
     private Result changeSleepTime(@RequestParam("gpt3_sleepTime") Integer gpt3_sleepTime,
                                    @RequestParam("gpt4_sleepTime") Integer gpt4_sleepTime,
+                                   @RequestParam("get_token_url") String get_token_url,
                                    @RequestParam("password") String password) {
         try {
-            if (password.equals(getPassword())) {
+            if (password.equals(selectSetting().getPassword())) {
+                String parent = selectFile();
+                // 读取 JSON 文件内容
+                String jsonContent = new String(Files.readAllBytes(Paths.get(parent)));
+                JSONObject jsonObject = new JSONObject(jsonContent);
                 if (gpt3_sleepTime != null && gpt4_sleepTime >= 0 && gpt4_sleepTime <= 150) {
                     setGpt3_sleepTime(gpt3_sleepTime);
+                    jsonObject.put("gpt3_sleepTime", gpt3_sleepTime);
                 }
                 if (gpt4_sleepTime != null && gpt4_sleepTime >= 0 && gpt4_sleepTime <= 150) {
                     setGpt4_sleepTime(gpt4_sleepTime);
+                    jsonObject.put("gpt4_sleepTime", gpt4_sleepTime);
                 }
+                if (get_token_url != null && get_token_url.startsWith("http")) {
+                    setGet_token_url(get_token_url);
+                    jsonObject.put("get_token_url", get_token_url);
+                }
+                // 将修改后的 JSONObject 转换为格式化的 JSON 字符串
+                String updatedJson = jsonObject.toString(2);
+                Files.write(Paths.get(parent), updatedJson.getBytes());
                 return Result.success("修改成功！");
             } else {
                 return Result.error("管理员密码不对，请重新再试！");
@@ -298,6 +409,7 @@ public class chatController {
             future.cancel(true);
             responseEntity = new ResponseEntity<>(Result.error("The task timed out"), HttpStatus.REQUEST_TIMEOUT);
         } catch (Exception ex) {
+            log.error(ex.getMessage());
             responseEntity = new ResponseEntity<>(Result.error("An error occurred"), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return responseEntity;
@@ -384,6 +496,7 @@ public class chatController {
             future.cancel(true);
             responseEntity = new ResponseEntity<>(Result.error("The chat timed out"), HttpStatus.REQUEST_TIMEOUT);
         } catch (Exception ex) {
+            log.error(ex.getMessage());
             responseEntity = new ResponseEntity<>(Result.error("An error occurred"), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return responseEntity;
@@ -456,6 +569,7 @@ public class chatController {
             future.cancel(true);
             responseEntity = new ResponseEntity<>(Result.error("The chat timed out"), HttpStatus.REQUEST_TIMEOUT);
         } catch (Exception ex) {
+            log.error(ex.getMessage());
             responseEntity = new ResponseEntity<>(Result.error("An error occurred"), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return responseEntity;
@@ -577,6 +691,7 @@ public class chatController {
             future.cancel(true);
             responseEntity = new ResponseEntity<>(Result.error("The chat timed out"), HttpStatus.REQUEST_TIMEOUT);
         } catch (Exception ex) {
+            log.error(ex.getMessage());
             responseEntity = new ResponseEntity<>(Result.error("An error occurred"), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return responseEntity;
@@ -662,6 +777,7 @@ public class chatController {
             future.cancel(true);
             responseEntity = new ResponseEntity<>(Result.error("The chat timed out"), HttpStatus.REQUEST_TIMEOUT);
         } catch (Exception ex) {
+            log.error(ex.getMessage());
             responseEntity = new ResponseEntity<>(Result.error("An error occurred"), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return responseEntity;
@@ -746,6 +862,7 @@ public class chatController {
             future.cancel(true);
             responseEntity = new ResponseEntity<>(Result.error("The chat timed out"), HttpStatus.REQUEST_TIMEOUT);
         } catch (Exception ex) {
+            log.error(ex.getMessage());
             responseEntity = new ResponseEntity<>(Result.error("An error occurred"), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return responseEntity;
@@ -831,6 +948,7 @@ public class chatController {
             throw new RuntimeException(e);
         }
     }
+
     /**
      * 用于self——ccu 拿到token
      *
@@ -857,6 +975,7 @@ public class chatController {
             throw new RuntimeException(e);
         }
     }
+
     /**
      * copilot的模型
      *
