@@ -33,14 +33,14 @@ public class copilotApplication {
 
     @PostConstruct
     public void initialize() {
-        System.out.println("------------------------------------------------------");
-        System.out.println("----------原神gpt4-copilot-java-native v0.0.4启动成功------------");
+        System.out.println("-------------------------------------------------------");
+        System.out.println("------原神gpt4-copilot-java-native v0.0.4启动成功--------");
         System.out.println("* 采用graalvm打包，运行内存大幅度减小");
         System.out.println("* 增加自定义获取token渠道");
         System.out.println("* 增加自定义/self/*接口");
         System.out.println("* 增加反代/copilot_internal/v2/token接口");
         System.out.println("URL地址：http://0.0.0.0:" + serverPort + contextPath +"");
-        System.out.println("------------------------------------------------------");
+        System.out.println("-------------------------------------------------------");
     }
 }
 
