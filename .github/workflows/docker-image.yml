@@ -38,7 +38,7 @@ jobs:
       uses: docker/build-push-action@v2
       with:
         context: .
-        file: ./Dockerfiles/Dockerfile.jvm
+        file: ./Dockerfiles/Dockerfile
         push: true
         tags: |
           yangclivia/spring-native-image:${{ steps.tag_name.outputs.tag }}
