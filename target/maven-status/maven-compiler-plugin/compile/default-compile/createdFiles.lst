@@ -1,2 +1,8 @@
-com\example\benchmarks\jibber\DemoApplication.class
-com\example\benchmarks\jibber\Jabberwocky.class
+com\gpt4\copilot\pojo\systemSetting.class
+com\gpt4\copilot\config\WebConfig.class
+com\gpt4\copilot\controller\CustomErrorController.class
+com\gpt4\copilot\config\CorsConfig.class
+com\gpt4\copilot\pojo\Result.class
+com\gpt4\copilot\controller\chatController.class
+com\gpt4\copilot\controller\chatController$1.class
+com\gpt4\copilot\copilotApplication.class

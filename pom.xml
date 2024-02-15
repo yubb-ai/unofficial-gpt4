@@ -9,9 +9,9 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 	<groupId>com.gpt4.copilot</groupId>
-	<artifactId>gpt-4-copilot-native</artifactId>
-	<version>gpt-4-copilot-native</version>
-	<name>gpt-4-copilot-native</name>
+	<artifactId>gpt-4-copilot</artifactId>
+	<version>0.0.4</version>
+	<name>native</name>
     <description>Demo project for Spring Boot with GraalVM Native Image</description>
     <properties>
         <java.version>17</java.version>
