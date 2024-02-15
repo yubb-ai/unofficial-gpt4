@@ -8,9 +8,9 @@
         <version>3.2.0</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-	<groupId>com.example</groupId>
-	<artifactId>benchmark-jibber</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<groupId>com.gpt4.copilot</groupId>
+	<artifactId>gpt-4-copilot-native</artifactId>
+	<version>gpt-4-copilot-native</version>
 	<name>benchmark-jibber</name>
     <description>Demo project for Spring Boot with GraalVM Native Image</description>
     <properties>
@@ -39,6 +39,32 @@
             <groupId>org.rednoise</groupId>
             <artifactId>rita</artifactId>
             <version>2.4.501</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!--        json-->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>2.0.32</version>
+        </dependency>
+        <!--        okhttp依赖-->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+        </dependency>
+        <dependency>
+            <groupId>com.vaadin.external.google</groupId>
+            <artifactId>android-json</artifactId>
+            <version>0.0.20131108.vaadin1</version>
         </dependency>
     </dependencies>
 
