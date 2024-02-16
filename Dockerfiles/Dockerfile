@@ -19,7 +19,7 @@ FROM container-registry.oracle.com/graalvm/native-image:21-ol8
 # Expose port 8080 for the application
 EXPOSE 8080
 
-Copy the native executable into the containers
+# Copy the native executable into the containers
 COPY --from=builder /build/target/gpt-4-copilot app
 
 ENTRYPOINT ["/app"] 
