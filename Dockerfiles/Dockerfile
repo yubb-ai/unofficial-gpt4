@@ -19,5 +19,5 @@ FROM container-registry.oracle.com/os/oraclelinux:8-slim
 EXPOSE 8080
 
 # Copy the native executable into the containers
-COPY --from=builder /build/target/gpt-4-copilot-0.0.4 app
+COPY --from=builder /build/target/gpt-4-copilot app
 ENTRYPOINT ["/app"]
