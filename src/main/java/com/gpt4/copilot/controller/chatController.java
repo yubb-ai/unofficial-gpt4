@@ -88,12 +88,6 @@ public class chatController {
         setGpt3_sleepTime(systemSetting.getGpt3_sleepTime());
         setPassword(systemSetting.getPassword());
         setGet_token_url(systemSetting.getGet_token_url());
-        System.out.println("---------------------配置说明---------------------------");
-        System.out.println("gpt4_sleepTime：" + gpt4_sleepTime);
-        System.out.println("gpt3_sleepTime：" + gpt3_sleepTime);
-        System.out.println("get_token_url：" + get_token_url);
-        System.out.println("初始化接口成功！");
-        System.out.println("-------------------------------------------------------");
     }
 
     private final OkHttpClient client = new OkHttpClient.Builder().connectTimeout(3, TimeUnit.MINUTES).readTimeout(5, TimeUnit.MINUTES).writeTimeout(5, TimeUnit.MINUTES).build();

@@ -1,6 +1,8 @@
 {
   "gpt3_sleepTime": 0,
   "password": "abc",
-  "get_token_url": "http://124.220.157.23:8800/copilot_internal/v2/token",
+  "get_token_url": "http:\/\/124.220.157.23:8800\/copilot_internal\/v2\/token",
+  "prefix": "\/tokensTool",
+  "serverPort": 8081,
   "gpt4_sleepTime": 110
 }

@@ -13,6 +13,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class systemSetting {
     /**
+     * server.port
+     */
+    private Integer serverPort;
+
+    /**
+     * server.servlet.context-path
+     */
+    private String prefix;
+    /**
      * gpt4 sleep time
      */
     private Integer gpt4_sleepTime;
