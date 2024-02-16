@@ -43,4 +43,4 @@ jobs:
           tags: |
             yangclivia/gpt4-copilot-java:${{ steps.tag_name.outputs.tag }}
             yangclivia/gpt4-copilot-java:latest
-          platforms: linux/arm64
+          platforms: linux/amd64, linux/arm64
