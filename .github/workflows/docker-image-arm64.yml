@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build and Push Docker Image -Arm64
 
 on:
   release:
@@ -41,6 +41,5 @@ jobs:
           file: ./Dockerfiles/Dockerfile
           push: true
           tags: |
-            yangclivia/gpt4-copilot-java:${{ steps.tag_name.outputs.tag }}
-            yangclivia/gpt4-copilot-java:latest
-          platforms: linux/amd64,linux/arm64
+            yangclivia/gpt4-copilot-java:${{ steps.tag_name.outputs.tag }}-arm64
+          platforms: linux/arm64
