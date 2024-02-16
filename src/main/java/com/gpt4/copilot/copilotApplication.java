@@ -124,6 +124,8 @@ public class copilotApplication {
         System.out.println("gpt3_sleepTime：" + chatController.getGpt3_sleepTime());
         System.out.println("gpt4_sleepTime：" + chatController.getGpt4_sleepTime());
         System.out.println("get_token_url：" + chatController.getGet_token_url());
+        System.out.println("vscode_version：" + chatController.getVscode_version());
+        System.out.println("maxPoolSize：" + chatController.getMaxPoolSize());
         System.out.println("password：" + chatController.getPassword());
         System.out.println("gpt4-copilot-java-native初始化接口成功！");
         System.out.println("-------------------------------------------------------");

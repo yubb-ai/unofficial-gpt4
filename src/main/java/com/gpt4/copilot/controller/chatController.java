@@ -58,17 +58,17 @@ public class chatController {
     private static final String models = "{\"data\":[{\"id\":\"text-search-babbage-doc-001\",\"object\":\"model\",\"created\":1651172509,\"owned_by\":\"openai-dev\"},{\"id\":\"gpt-4\",\"object\":\"model\",\"created\":1687882411,\"owned_by\":\"openai\"},{\"id\":\"babbage\",\"object\":\"model\",\"created\":1649358449,\"owned_by\":\"openai\"},{\"id\":\"gpt-3.5-turbo-0613\",\"object\":\"model\",\"created\":1686587434,\"owned_by\":\"openai\"},{\"id\":\"text-babbage-001\",\"object\":\"model\",\"created\":1649364043,\"owned_by\":\"openai\"},{\"id\":\"gpt-3.5-turbo\",\"object\":\"model\",\"created\":1677610602,\"owned_by\":\"openai\"},{\"id\":\"gpt-3.5-turbo-1106\",\"object\":\"model\",\"created\":1698959748,\"owned_by\":\"system\"},{\"id\":\"curie-instruct-beta\",\"object\":\"model\",\"created\":1649364042,\"owned_by\":\"openai\"},{\"id\":\"gpt-3.5-turbo-0301\",\"object\":\"model\",\"created\":1677649963,\"owned_by\":\"openai\"},{\"id\":\"gpt-3.5-turbo-16k-0613\",\"object\":\"model\",\"created\":1685474247,\"owned_by\":\"openai\"},{\"id\":\"text-embedding-ada-002\",\"object\":\"model\",\"created\":1671217299,\"owned_by\":\"openai-internal\"},{\"id\":\"davinci-similarity\",\"object\":\"model\",\"created\":1651172509,\"owned_by\":\"openai-dev\"},{\"id\":\"curie-similarity\",\"object\":\"model\",\"created\":1651172510,\"owned_by\":\"openai-dev\"},{\"id\":\"babbage-search-document\",\"object\":\"model\",\"created\":1651172510,\"owned_by\":\"openai-dev\"},{\"id\":\"curie-search-document\",\"object\":\"model\",\"created\":1651172508,\"owned_by\":\"openai-dev\"},{\"id\":\"babbage-code-search-code\",\"object\":\"model\",\"created\":1651172509,\"owned_by\":\"openai-dev\"},{\"id\":\"ada-code-search-text\",\"object\":\"model\",\"created\":1651172510,\"owned_by\":\"openai-dev\"},{\"id\":\"text-search-curie-query-001\",\"object\":\"model\",\"created\":1651172509,\"owned_by\":\"openai-dev\"},{\"id\":\"text-davinci-002\",\"object\":\"model\",\"created\":1649880484,\"owned_by\":\"openai\"},{\"id\":\"ada\",\"object\":\"model\",\"created\":1649357491,\"owned_by\":\"openai\"},{\"id\":\"text-ada-001\",\"object\":\"model\",\"created\":1649364042,\"owned_by\":\"openai\"},{\"id\":\"ada-similarity\",\"object\":\"model\",\"created\":1651172507,\"owned_by\":\"openai-dev\"},{\"id\":\"code-search-ada-code-001\",\"object\":\"model\",\"created\":1651172507,\"owned_by\":\"openai-dev\"},{\"id\":\"text-similarity-ada-001\",\"object\":\"model\",\"created\":1651172505,\"owned_by\":\"openai-dev\"},{\"id\":\"text-davinci-edit-001\",\"object\":\"model\",\"created\":1649809179,\"owned_by\":\"openai\"},{\"id\":\"code-davinci-edit-001\",\"object\":\"model\",\"created\":1649880484,\"owned_by\":\"openai\"},{\"id\":\"text-search-curie-doc-001\",\"object\":\"model\",\"created\":1651172509,\"owned_by\":\"openai-dev\"},{\"id\":\"text-curie-001\",\"object\":\"model\",\"created\":1649364043,\"owned_by\":\"openai\"},{\"id\":\"curie\",\"object\":\"model\",\"created\":1649359874,\"owned_by\":\"openai\"},{\"id\":\"davinci\",\"object\":\"model\",\"created\":1649359874,\"owned_by\":\"openai\"}]}";
     private static final String machineId;
     private final static String get_cocopilotToken_url = "https://api.cocopilot.org/copilot_internal/v2/token";
-
+    private final static String github_get_token_url = "https://api.github.com/copilot_internal/v2/token";
+    private final static String github_chat = "https://api.githubcopilot.com/chat/completions";
+    private final static String github_embaddings = "https://api.githubcopilot.com/embeddings";
     /**
      * gpt4单字符睡眠时间
      */
     private static Integer gpt4_sleepTime;
-
     /**
      * gpt3单字符睡眠时间
      */
     private static Integer gpt3_sleepTime;
-
     /**
      * 修改睡眠时间密码
      */
@@ -77,6 +77,24 @@ public class chatController {
      * 自定义获取token_url
      */
     private static String get_token_url;
+    /**
+     * 自定义vscode_version
+     */
+    private static String vscode_version;
+    /**
+     * 自定义maxPoolSize
+     */
+    private static Integer maxPoolSize;
+    private static OkHttpClient client = new OkHttpClient.Builder().connectTimeout(3, TimeUnit.MINUTES).readTimeout(5, TimeUnit.MINUTES).writeTimeout(5, TimeUnit.MINUTES).build();
+    private static ThreadFactory threadFactory = new ThreadFactory() {
+        private final AtomicInteger counter = new AtomicInteger(0);
+
+        @Override
+        public Thread newThread(Runnable r) {
+            return new Thread(r, "chatThreadPool-" + counter.getAndIncrement());
+        }
+    };
+    private static ExecutorService executor;
 
     static {
         selfTokenList = new HashMap<>();
@@ -88,22 +106,30 @@ public class chatController {
         setGpt3_sleepTime(systemSetting.getGpt3_sleepTime());
         setPassword(systemSetting.getPassword());
         setGet_token_url(systemSetting.getGet_token_url());
+        setVscode_version(systemSetting.getVscode_version());
+        setMaxPoolSize(systemSetting.getMaxPoolSize());
+        setExecutor(systemSetting.getMaxPoolSize());
     }
 
-    private final OkHttpClient client = new OkHttpClient.Builder().connectTimeout(3, TimeUnit.MINUTES).readTimeout(5, TimeUnit.MINUTES).writeTimeout(5, TimeUnit.MINUTES).build();
-    private final ThreadFactory threadFactory = new ThreadFactory() {
-        private final AtomicInteger counter = new AtomicInteger(0);
+    public static String getVscode_version() {
+        return vscode_version;
+    }
 
-        @Override
-        public Thread newThread(Runnable r) {
-            return new Thread(r, "chatThreadPool-" + counter.getAndIncrement());
-        }
-    };
-    private final ExecutorService executor = new ThreadPoolExecutor(0, 300, 60L, TimeUnit.SECONDS, new SynchronousQueue<>(), threadFactory);
-    private final String github_get_token_url = "https://api.github.com/copilot_internal/v2/token";
-    private final String github_chat = "https://api.githubcopilot.com/chat/completions";
-    private final String github_embaddings = "https://api.githubcopilot.com/embeddings";
-    private final String vscode_version = "vscode/1.85.2";
+    public static void setVscode_version(String vscode_version) {
+        chatController.vscode_version = vscode_version;
+    }
+
+    public static Integer getMaxPoolSize() {
+        return maxPoolSize;
+    }
+
+    public static void setMaxPoolSize(Integer maxPoolSize) {
+        chatController.maxPoolSize = maxPoolSize;
+    }
+
+    public static void setExecutor(Integer maxPoolSize) {
+        chatController.executor = new ThreadPoolExecutor(0, maxPoolSize, 60L, TimeUnit.SECONDS, new SynchronousQueue<>(), threadFactory);
+    }
 
     public static Integer getGpt4_sleepTime() {
         return gpt4_sleepTime;
@@ -201,12 +227,30 @@ public class chatController {
                 exist = false;
             }
 
+            try {
+                jsonObject.getString("vscode_version");
+            } catch (JSONException e) {
+                jsonObject.put("vscode_version", "vscode/1.85.2");
+                log.info("config.json没有新增vscode_version参数,现已增加！");
+                exist = false;
+            }
+
+            try {
+                jsonObject.getInt("maxPoolSize");
+            } catch (JSONException e) {
+                jsonObject.put("maxPoolSize", 300);
+                log.info("config.json没有新增maxPoolSize参数,现已增加！");
+                exist = false;
+            }
+
             // 将 JSONObject 转换为 Config 类的实例
             systemSetting config = new systemSetting();
             config.setGpt4_sleepTime(jsonObject.optInt("gpt4_sleepTime"));
             config.setGpt3_sleepTime(jsonObject.optInt("gpt3_sleepTime"));
             config.setPassword(jsonObject.optString("password"));
             config.setGet_token_url(jsonObject.optString("get_token_url"));
+            config.setVscode_version(jsonObject.optString("vscode_version"));
+            config.setMaxPoolSize(jsonObject.optInt("maxPoolSize"));
 
             if (exist == false) {
                 // 将修改后的 JSONObject 转换为格式化的 JSON 字符串

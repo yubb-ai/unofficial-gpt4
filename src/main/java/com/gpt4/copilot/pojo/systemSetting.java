@@ -40,4 +40,15 @@ public class systemSetting {
      * self-define get_token_url
      */
     private String get_token_url;
+
+    /**
+     * vscode_version
+     */
+    private String vscode_version;
+
+    /**
+     * maxPoolSize
+     */
+    private Integer maxPoolSize;
+
 }
