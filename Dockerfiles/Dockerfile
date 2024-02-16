@@ -20,4 +20,4 @@ EXPOSE 8080
 
 # Copy the native executable into the containers
 COPY --from=builder /build/target/gpt-4-copilot app
-ENTRYPOINT ["/app"] 
+ENTRYPOINT ["/app"]
