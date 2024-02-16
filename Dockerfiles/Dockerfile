@@ -4,14 +4,16 @@ FROM container-registry.oracle.com/graalvm/native-image:21-ol8 AS builder
 # Set the working directory to /home/app
 WORKDIR /build
 
-# Copy the source code into the image for building
-COPY . /build
+# Copy the pom.xml file and download dependencies
+COPY pom.xml .
+RUN ./mvnw dependency:go-offline
 
-# Add execute permission to mvnw script
-RUN chmod +x mvnw
+# Copy the rest of the source code
+COPY . .
 
-# Build
-RUN ./mvnw --no-transfer-progress native:compile -Pnative
+# Add execute permission to mvnw script and build
+RUN chmod +x mvnw && \
+    ./mvnw --no-transfer-progress native:compile -Pnative
 
 # The deployment Image
 FROM container-registry.oracle.com/os/oraclelinux:8-slim
