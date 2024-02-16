@@ -22,6 +22,8 @@ EXPOSE 8080
 # Copy the native executable into the container
 COPY --from=builder /build/target/gpt-4-copilot app
 
+RUN chmod +x /app
+
 # Set the entry point to run your application
 ENTRYPOINT ["/app"]
 
