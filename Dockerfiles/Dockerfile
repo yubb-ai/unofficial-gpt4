@@ -14,7 +14,7 @@ RUN chmod +x mvnw
 RUN ./mvnw --no-transfer-progress native:compile -Pnative
 
 # Use a lightweight Linux base image with just enough runtime dependencies
-FROM alpine:latest
+FROM container-registry.oracle.com/os/oraclelinux:8-slim
 
 # Expose port 8080 for the application
 EXPOSE 8080
