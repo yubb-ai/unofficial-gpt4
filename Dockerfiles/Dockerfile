@@ -1,5 +1,5 @@
 # Using Oracle GraalVM for JDK 17
-FROM observabilitystack/graalvm-maven-builder:21.0.1-ol9 AS builder
+FROM container-registry.oracle.com/graalvm/native-image:21-ol8 AS builder
 
 # Set the working directory to /home/app
 WORKDIR /build
@@ -14,7 +14,7 @@ RUN chmod +x mvnw
 RUN ./mvnw --no-transfer-progress native:compile -Pnative
 
 # Use a lightweight Linux base image with just enough runtime dependencies
-FROM container-registry.oracle.com/os/oraclelinux:8-slim
+FROM alpine:latest
 
 # Expose port 8080 for the application
 EXPOSE 8080
