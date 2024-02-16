@@ -14,16 +14,12 @@ RUN chmod +x mvnw
 RUN ./mvnw --no-transfer-progress native:compile -Pnative
 
 # Use a lightweight Linux base image with just enough runtime dependencies
-FROM alpine:latest
+FROM container-registry.oracle.com/graalvm/native-image:21-ol8
 
 # Expose port 8080 for the application
 EXPOSE 8080
 
-# Copy the native executable into the container
-COPY --from=builder /build/target/gpt-4-copilot /app
+Copy the native executable into the containers
+COPY --from=builder /build/target/gpt-4-copilot app
 
-RUN chmod +x /app
-
-# Set the entry point to run your application
-ENTRYPOINT ["/app"]
-
+ENTRYPOINT ["/app"] 
