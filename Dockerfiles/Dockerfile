@@ -11,8 +11,11 @@ RUN mvn dependency:go-offline
 # Copy the rest of the source code
 COPY . .
 
+# Add execute permission to mvnw script
+RUN chmod +x mvnw
+
 # Build
-RUN mvn --no-transfer-progress native:compile -Pnative
+RUN ./mvnw --no-transfer-progress native:compile -Pnative
 
 # The deployment Image
 FROM container-registry.oracle.com/os/oraclelinux:8-slim
@@ -20,6 +23,5 @@ FROM container-registry.oracle.com/os/oraclelinux:8-slim
 EXPOSE 8080
 
 # Copy the native executable into the containers
-COPY --from=builder /build/target/gpt-4-copilot app
-ENTRYPOINT ["/app"]
-
+COPY --from=builder /build/target/gpt-4-copilot gpt-4-copilot
+ENTRYPOINT ["/gpt-4-copilot"]
