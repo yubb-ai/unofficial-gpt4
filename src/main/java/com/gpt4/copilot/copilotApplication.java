@@ -1,6 +1,7 @@
 package com.gpt4.copilot;
 
 
+import com.gpt4.copilot.controller.chatController;
 import com.gpt4.copilot.pojo.systemSetting;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONException;
@@ -13,7 +14,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.UUID;
 
 /**
  * @author YANGYANG
@@ -70,10 +70,6 @@ public class copilotApplication {
             systemSetting config = new systemSetting();
             config.setServerPort(getIntOrDefault(jsonObject, "serverPort", 8080));
             config.setPrefix(getStringOrDefault(jsonObject, "prefix", "/"));
-            config.setGpt4_sleepTime(getIntOrDefault(jsonObject, "gpt4_sleepTime", 100));
-            config.setGpt3_sleepTime(getIntOrDefault(jsonObject, "gpt3_sleepTime", 0));
-            config.setPassword(getStringOrDefault(jsonObject, "password", UUID.randomUUID().toString()));
-            config.setGet_token_url(getStringOrDefault(jsonObject, "get_token_url", "https://api.copilot.org/copilot_internal/v2/token"));
             String updatedJson = jsonObject.toString(2);
             Files.write(Paths.get(configFilePath), updatedJson.getBytes());
             return config;
@@ -114,20 +110,22 @@ public class copilotApplication {
     }
 
     private static void printStartupMessage(systemSetting config) {
-        System.out.println("-------------------------------------------------------");
+        System.out.println("\n-------------------------------------------------------");
         System.out.println("------原神gpt4-copilot-java-native v0.0.4启动成功--------");
         System.out.println("* 采用graalvm打包，运行内存大幅度减小");
         System.out.println("* 增加自定义获取token渠道");
         System.out.println("* 增加自定义/self/*接口");
         System.out.println("* 增加反代/copilot_internal/v2/token接口");
         System.out.println("URL地址：http://0.0.0.0:" + config.getServerPort() + config.getPrefix() + "");
-        System.out.println("-------------------------------------------------------\n");
+        System.out.println("-------------------------------------------------------");
         System.out.println("---------------------配置说明---------------------------");
-        System.out.println("gpt4_sleepTime：" + config.getGpt4_sleepTime());
-        System.out.println("gpt3_sleepTime：" + config.getGpt3_sleepTime());
-        System.out.println("get_token_url：" + config.getGet_token_url());
-        System.out.println("password：" + config.getPassword());
-        System.out.println("初始化接口成功！");
+        System.out.println("serverPort：" + config.getServerPort());
+        System.out.println("prefix：" + config.getPrefix());
+        System.out.println("gpt3_sleepTime：" + chatController.getGpt3_sleepTime());
+        System.out.println("gpt4_sleepTime：" + chatController.getGpt4_sleepTime());
+        System.out.println("get_token_url：" + chatController.getGet_token_url());
+        System.out.println("password：" + chatController.getPassword());
+        System.out.println("gpt4-copilot-java-native初始化接口成功！");
         System.out.println("-------------------------------------------------------");
     }
 

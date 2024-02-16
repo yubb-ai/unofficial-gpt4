@@ -105,6 +105,38 @@ public class chatController {
     private final String github_embaddings = "https://api.githubcopilot.com/embeddings";
     private final String vscode_version = "vscode/1.85.2";
 
+    public static Integer getGpt4_sleepTime() {
+        return gpt4_sleepTime;
+    }
+
+    public static void setGpt4_sleepTime(Integer gpt4_sleepTime) {
+        chatController.gpt4_sleepTime = gpt4_sleepTime;
+    }
+
+    public static Integer getGpt3_sleepTime() {
+        return gpt3_sleepTime;
+    }
+
+    public static void setGpt3_sleepTime(Integer gpt3_sleepTime) {
+        chatController.gpt3_sleepTime = gpt3_sleepTime;
+    }
+
+    public static String getPassword() {
+        return password;
+    }
+
+    public static void setPassword(String password) {
+        chatController.password = password;
+    }
+
+    public static String getGet_token_url() {
+        return get_token_url;
+    }
+
+    public static void setGet_token_url(String get_token_url) {
+        chatController.get_token_url = get_token_url;
+    }
+
     public static String selectFile() {
         String projectRoot = System.getProperty("user.dir");
         String parent = projectRoot + File.separator + "config.json";
@@ -124,21 +156,6 @@ public class chatController {
             System.out.println("config.json创建完成: " + jsonFilePath);
         }
         return parent;
-    }
-
-
-    public static void setGpt4_sleepTime(Integer gpt4_sleepTime) {
-        chatController.gpt4_sleepTime = gpt4_sleepTime;
-    }
-
-
-    public static void setGpt3_sleepTime(Integer gpt3_sleepTime) {
-        chatController.gpt3_sleepTime = gpt3_sleepTime;
-    }
-
-
-    public static void setGet_token_url(String get_token_url) {
-        chatController.get_token_url = get_token_url;
     }
 
     /**
@@ -220,10 +237,6 @@ public class chatController {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public static void setPassword(String password) {
-        chatController.password = password;
     }
 
     /**

@@ -1,14 +1,18 @@
 # Spring Boot Microservice with Oracle GraalVM in OCI Cloud Shell
 
-This part shows how you can get started quickly with Oracle GraalVM in Oracle Cloud Infrastructure (OCI) Cloud Shell using the Spring Boot 3 microservice example.
+This part shows how you can get started quickly with Oracle GraalVM in Oracle Cloud Infrastructure (OCI) Cloud Shell
+using the Spring Boot 3 microservice example.
 
 Oracle GraalVM is available for use on Oracle Cloud Infrastructure (OCI) at no additional cost.
 
 ## What is Cloud Shell?
 
-[Cloud Shell](https://www.oracle.com/devops/cloud-shell/) is a free-to-use browser-based terminal accessible from the Oracle Cloud Console. It provides access to a Linux shell with preinstalled developer tools and a pre-authenticated OCI CLI. You can use the shell to interact with OCI resources, follow labs and tutorials, and quickly run utility commands.
+[Cloud Shell](https://www.oracle.com/devops/cloud-shell/) is a free-to-use browser-based terminal accessible from the
+Oracle Cloud Console. It provides access to a Linux shell with preinstalled developer tools and a pre-authenticated OCI
+CLI. You can use the shell to interact with OCI resources, follow labs and tutorials, and quickly run utility commands.
 
-Oracle GraalVM for JDK 17 (with Native Image) is preinstalled in Cloud Shell, so you don’t have to install and configure a development machine to get started.
+Oracle GraalVM for JDK 17 (with Native Image) is preinstalled in Cloud Shell, so you don’t have to install and configure
+a development machine to get started.
 
 ## Step 1: Launch Cloud Shell
 
@@ -22,7 +26,7 @@ Oracle GraalVM for JDK 17 (with Native Image) is preinstalled in Cloud Shell, so
     csruntimectl java list
     ```
 
-    The output should be similar to (versions may vary):
+   The output should be similar to (versions may vary):
 
     ```shell
       graalvmjdk-17                                                      /usr/lib64/graalvm/graalvm-java17
@@ -36,7 +40,7 @@ Oracle GraalVM for JDK 17 (with Native Image) is preinstalled in Cloud Shell, so
     csruntimectl java set graalvmjdk-17
     ```
 
-    The output should be similar to:
+   The output should be similar to:
 
     ```shell
     The current managed java version is set to graalvmjdk-17.
@@ -85,7 +89,8 @@ This step is optional - [Check software version and environment variables](../_c
     curl http://localhost:8080/jibber
     ```
 
-    It should generate a random nonsense verse in the style of the poem Jabberwocky by Lewis Carrol. The output should be similar to:
+   It should generate a random nonsense verse in the style of the poem Jabberwocky by Lewis Carrol. The output should be
+   similar to:
 
     ```shell
     ...
@@ -119,7 +124,7 @@ Now build a native executable for your Spring Boot microservice using Oracle Gra
     mvn -Pnative native:compile
     ```
 
-    This will create a binary executable `target/benchmark-jibber`.
+   This will create a binary executable `target/benchmark-jibber`.
 
 2. Run the app native executable in the background
 
@@ -133,7 +138,8 @@ Now build a native executable for your Spring Boot microservice using Oracle Gra
     curl http://localhost:8080/jibber
     ```
 
-    It should generate a random nonsense verse in the style of the poem Jabberwocky by Lewis Carrol. The output should be similar to:
+   It should generate a random nonsense verse in the style of the poem Jabberwocky by Lewis Carrol. The output should be
+   similar to:
 
     ```shell
     ...

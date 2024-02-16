@@ -1,20 +1,26 @@
 # Spring Boot Microservice with Oracle GraalVM in OCI Code Editor
 
-This part shows how you can get started quickly with Oracle GraalVM in Oracle Cloud Infrastructure (OCI) Code Editor using the Spring Boot 3 microservice example.
+This part shows how you can get started quickly with Oracle GraalVM in Oracle Cloud Infrastructure (OCI) Code Editor
+using the Spring Boot 3 microservice example.
 
 Oracle GraalVM is available for use on Oracle Cloud Infrastructure (OCI) at no additional cost.
+
 ## What is Code Editor?
 
-[Code Editor](https://www.oracle.com/devops/code-editor/) enables you to edit and deploy code directly from the Oracle Cloud Console. You can develop applications, service workflows, and scripts entirely from a browser. This makes it easy to rapidly prototype cloud solutions, try new services, and accomplish quick coding tasks.
+[Code Editor](https://www.oracle.com/devops/code-editor/) enables you to edit and deploy code directly from the Oracle
+Cloud Console. You can develop applications, service workflows, and scripts entirely from a browser. This makes it easy
+to rapidly prototype cloud solutions, try new services, and accomplish quick coding tasks.
 
-Oracle GraalVM for JDK 17 (with Native Image) is preinstalled in Cloud Shell, so you don’t have to install and configure a development machine to get started. Code Editor's integration with Cloud Shell gives you direct access to Oracle GraalVM JDK and Native Image.
+Oracle GraalVM for JDK 17 (with Native Image) is preinstalled in Cloud Shell, so you don’t have to install and configure
+a development machine to get started. Code Editor's integration with Cloud Shell gives you direct access to Oracle
+GraalVM JDK and Native Image.
 
 ## Step 1: Open Terminal in Code Editor
 
 1. [Login to OCI Console and launch Code Editor](https://cloud.oracle.com/?bdcstate=maximized&codeeditor=true).
 
 2. Open a `New Terminal` in Code Editor. Use this Terminal window to run the commands shown in this sample.
-![](./images/oci-ce-terminal.png)
+   ![](./images/oci-ce-terminal.png)
 
 ## Step 2: Select GraalVM as the Current JDK
 
@@ -24,7 +30,7 @@ Oracle GraalVM for JDK 17 (with Native Image) is preinstalled in Cloud Shell, so
     csruntimectl java list
     ```
 
-    The output should be similar to (versions may vary):
+   The output should be similar to (versions may vary):
 
     ```shell
       graalvmjdk-17                                                      /usr/lib64/graalvm/graalvm-java17
@@ -38,7 +44,7 @@ Oracle GraalVM for JDK 17 (with Native Image) is preinstalled in Cloud Shell, so
     csruntimectl java set graalvmjdk-17
     ```
 
-    The output should be similar to:
+   The output should be similar to:
 
     ```shell
     The current managed java version is set to graalvmjdk-17.
@@ -87,7 +93,8 @@ This step is optional - [Check software version and environment variables](../_c
     curl http://localhost:8080/jibber
     ```
 
-    It should generate a random nonsense verse in the style of the poem Jabberwocky by Lewis Carrol. The output should be similar to:
+   It should generate a random nonsense verse in the style of the poem Jabberwocky by Lewis Carrol. The output should be
+   similar to:
 
     ```shell
     ...
@@ -120,7 +127,7 @@ Now build a native executable for your Spring Boot microservice using GraalVM Na
     ```shell
     mvn -Pnative native:compile
     ```
-    This will create a binary executable `target/benchmark-jibber`.
+   This will create a binary executable `target/benchmark-jibber`.
 
 2. Run the app native executable in the background
 
@@ -133,7 +140,8 @@ Now build a native executable for your Spring Boot microservice using GraalVM Na
     ```shell
     curl http://localhost:8080/jibber
     ```
-    It should generate a random nonsense verse in the style of the poem Jabberwocky by Lewis Carrol. The output should be similar to:
+   It should generate a random nonsense verse in the style of the poem Jabberwocky by Lewis Carrol. The output should be
+   similar to:
 
     ```shell
     ...
