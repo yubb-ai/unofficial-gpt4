@@ -13,16 +13,16 @@ RUN chmod +x mvnw && \
     rm -rf /root/.m2
 
 # Use Distroless as base image
-FROM container-registry.oracle.com/os/oraclelinux:8-slim
+FROM alpine:latest
 
 RUN apk update \
     && apk upgrade \
     && apk add --no-cache tzdata
 
 # Copy the native executable into the containers
-COPY --from=builder /build/target/gpt-4-copilot /app
+COPY --from=builder /build/target/gpt-4-copilot /config/gpt-4-copilot
 
 # Set the entrypoint
-ENTRYPOINT ["/app"]
+ENTRYPOINT ["/config/gpt-4-copilot"]
 
 
