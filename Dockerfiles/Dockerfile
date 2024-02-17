@@ -15,12 +15,9 @@ RUN chmod +x mvnw && \
 # Use Scratch as base image
 FROM scratch
 
-# Copy the native executable into the containers
-COPY --from=builder /build/target/gpt-4-copilot /gpt-4-copilot
-
 # Copy the tzdata from builder image
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
-# Set the entrypoint
-ENTRYPOINT ["/gpt-4-copilot"]
-
+# Copy the native executable into the containers
+COPY --from=builder /build/target/gpt-4-copilot app
+ENTRYPOINT ["/app"] 
