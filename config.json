@@ -1,10 +1,10 @@
 {
   "gpt3_sleepTime": 0,
-  "password": "2602c0f5-7e73-4586-a788-2c856d2eb748",
-  "get_token_url": "http:\/\/124.220.157.23:8800\/copilot_internal\/v2\/token",
-  "prefix": "\/tokensTool",
+  "password": "",
+  "get_token_url": "",
+  "prefix": "",
   "vscode_version": "vscode\/1.85.2",
   "serverPort": 8081,
-  "maxPoolSize": 250,
+  "maxPoolSize": 300,
   "gpt4_sleepTime": 110
 }
