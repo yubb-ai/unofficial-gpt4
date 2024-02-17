@@ -13,7 +13,7 @@ RUN chmod +x mvnw && \
     rm -rf /root/.m2
 
 # Use Distroless as base image
-FROM alpine
+FROM frolvlad/alpine-glibc:latest
 
 RUN apk update \
     && apk upgrade \
