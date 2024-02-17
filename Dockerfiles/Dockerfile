@@ -13,7 +13,7 @@ RUN chmod +x mvnw && \
     rm -rf /root/.m2
 
 # Use Distroless as base image
-FROM frolvlad/alpine-glibc:latest
+FROM container-registry.oracle.com/os/oraclelinux:8-slim
 
 RUN apk update \
     && apk upgrade \
