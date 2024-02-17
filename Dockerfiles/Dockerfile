@@ -13,7 +13,7 @@ RUN chmod +x mvnw && \
     rm -rf /root/.m2
 
 # Use Distroless as base image
-container-registry.oracle.com/os/oraclelinux:8-slim
+FROM container-registry.oracle.com/os/oraclelinux:8-slim
 
 # Copy the native executable into the containers
 COPY --from=builder /build/target/gpt-4-copilot /app
