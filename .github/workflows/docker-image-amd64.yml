@@ -1,4 +1,4 @@
-name: Build and Push Docker Image -Amd64
+name: Build and Push Docker Image -jar
 
 on:
   release:
@@ -38,8 +38,8 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./Dockerfiles/Dockerfile
+          file: ./Dockerfiles/Dockerfile.jvm
           push: true
           tags: |
             yangclivia/gpt4-copilot-java:${{ steps.tag_name.outputs.tag }}-amd64
-          platforms: linux/amd64
+          platforms: linux/amd64, linux/arm64
