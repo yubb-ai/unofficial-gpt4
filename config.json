@@ -5,6 +5,6 @@
   "prefix": "",
   "vscode_version": "vscode\/1.85.2",
   "serverPort": 8081,
-  "maxPoolSize": 250,
+  "maxPoolSize": 300,
   "gpt4_sleepTime": 110
 }
