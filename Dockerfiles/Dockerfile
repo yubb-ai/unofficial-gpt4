@@ -1,4 +1,4 @@
-# Using Oracle GraalVM for JDK 17
+# Using devatherock/graalvm for JDK 17
 FROM devatherock/graalvm:21-ol8 AS builder
 
 # Set the working directory to /home/app
@@ -6,9 +6,6 @@ WORKDIR /build
 
 # Copy the source code into the image for building
 COPY . /build
-
-# Add execute permission to mvnw script
-RUN chmod +x mvnw
 
 # Build
 RUN chmod +x mvnw && \
@@ -18,7 +15,12 @@ RUN chmod +x mvnw && \
 # Use a lightweight Linux base image with just enough runtime dependencies
 FROM photon:latest
 
+# Set the timezone
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # Copy the native executable into the containers
 COPY --from=builder /build/target/gpt-4-copilot gpt-4-copilot
 
-ENTRYPOINT ["/gpt-4-copilot"] 
+ENTRYPOINT ["/gpt-4-copilot"]
+
