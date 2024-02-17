@@ -19,7 +19,9 @@ FROM scratch
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
 # Copy the native executable into the containers
+
 COPY --from=builder /build/target/gpt-4-copilot /gpt-4-copilot
 
 # Set the entrypoint
 ENTRYPOINT ["/gpt-4-copilot"]
+
