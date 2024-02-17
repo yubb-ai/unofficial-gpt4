@@ -16,7 +16,7 @@ RUN chmod +x mvnw && \
     rm -rf /root/.m2
     
 # Use a lightweight Linux base image with just enough runtime dependencies
-FROM ubuntu:latest
+FROM photon:latest
 
 # Copy the native executable into the containers
 COPY --from=builder /build/target/gpt-4-copilot gpt-4-copilot
