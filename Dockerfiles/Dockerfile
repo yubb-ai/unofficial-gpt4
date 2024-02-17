@@ -1,5 +1,5 @@
 # Using Oracle GraalVM for JDK 17
-FROM oracle/graalvm-ce:21.0.0.2 as builder
+FROM devatherock/graalvm:21-ol8 AS builder
 
 # Set the working directory to /build
 WORKDIR /build
