@@ -8,10 +8,7 @@ LABEL maintainer="Yanyutin753"
 USER root
 
 # 复制JAR文件到容器的/app目录下
-COPY /target/gpt-4-copilot-0.0.4.jar /app/app.jar
-
-# 切换到/app目录
-WORKDIR /app
+COPY /target/gpt-4-copilot-0.0.4.jar app.jar
 
 # 声明服务运行在8081端口
 EXPOSE 8081
