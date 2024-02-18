@@ -10,13 +10,15 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    # 设置 GraalVM 和 native-image
-    - name: Setup GraalVM
+    - name: Set up GraalVM
       uses: DeLaGuardo/setup-graalvm@5.0
       with:
-        graalvm-version: '17.0.8'
-        java-version: '17'
-        components: native-image
+        graalvm-version: '21.0.2'
+        java-version: 'java17'
+
+    - name: Configure GraalVM Native Image
+      run: |
+        gu install native-image
 
     # 打包应用程序
     - name: Package Application
