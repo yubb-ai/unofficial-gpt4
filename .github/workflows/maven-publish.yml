@@ -10,17 +10,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    # 设置 Java 环境
-    - name: Set up JDK 17
-      uses: actions/setup-java@v2
-      with:
-        java-version: '17'
-        distribution: 'temurin' # 使用 AdoptOpenJDK
-
-    # 构建项目
-    - name: Build with Maven
-      run: mvn clean install
-
     # 设置 GraalVM 和 native-image
     - name: Setup GraalVM
       uses: DeLaGuardo/setup-graalvm@5.0
