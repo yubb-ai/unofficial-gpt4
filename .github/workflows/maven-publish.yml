@@ -16,10 +16,6 @@ jobs:
         graalvm-version: '21.0.2'
         java-version: 'java17'
 
-    - name: Configure GraalVM Native Image
-      run: |
-        gu install native-image
-
     # 打包应用程序
     - name: Package Application
       run: |
