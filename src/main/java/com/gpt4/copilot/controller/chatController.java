@@ -598,7 +598,7 @@ public class chatController {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else {
-                            String token = getCoCoToken(apiKey);
+                            String token = getSelfToken(apiKey);
                             if (token == null) {
                                 return new ResponseEntity<>(Result.error("自定义self APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                             }
@@ -720,7 +720,7 @@ public class chatController {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else {
-                            String token = getCopilotToken(apiKey);
+                            String token = getSelfToken(apiKey);
                             if (token == null) {
                                 return new ResponseEntity<>(Result.error("Github Copilot APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                             }
