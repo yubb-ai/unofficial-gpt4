@@ -1,0 +1,64 @@
+name: Java CI with Maven and GraalVM Native Image
+
+on:
+  workflow_dispatch:
+  
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    # 设置 Java 环境
+    - name: Set up JDK 17
+      uses: actions/setup-java@v2
+      with:
+        java-version: '17'
+        distribution: 'temurin' # 使用 AdoptOpenJDK
+
+    # 构建项目
+    - name: Build with Maven
+      run: mvn clean install
+
+    # 设置 GraalVM 和 native-image
+    - name: Setup GraalVM
+      uses: DeLaGuardo/setup-graalvm@5.0
+      with:
+        graalvm-version: '17.0.8'
+        java-version: '17'
+        components: native-image
+
+    # 创建本地镜像
+    - name: Generate native image
+      run: |
+        mvn -Pnative -DskipTests package
+
+    # 打包应用程序
+    - name: Package Application
+      run: |
+        ./mvnw native:compile -Pnative
+
+    # 创建并发布 Release
+    - name: Create and Publish a Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    # 上传构建文件到 Release
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./gpt-copilot-java
+        asset_name: gpt-copilot-java.exe
+        asset_content_type: application/octet-stream
+
