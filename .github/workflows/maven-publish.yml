@@ -18,11 +18,6 @@ jobs:
         java-version: '17'
         components: native-image
 
-    # 创建本地镜像
-    - name: Generate native image
-      run: |
-        mvn -Pnative -DskipTests package
-
     # 打包应用程序
     - name: Package Application
       run: |
