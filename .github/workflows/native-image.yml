@@ -41,6 +41,7 @@ jobs:
           file: ./Dockerfiles/Dockerfile.native
           push: true
           tags: |
-            yangclivia/gpt4-copilot-java:${{ steps.tag_name.outputs.tag }}
+            yangclivia/gpt4-copilot-java:${{ steps.tag_name.outputs.tag }}-native
+            yangclivia/gpt4-copilot-java:latest-native
             yangclivia/gpt4-copilot-java:latest
           platforms: linux/amd64,linux/arm64/v8
