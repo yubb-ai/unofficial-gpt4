@@ -13,6 +13,9 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64/v8]
     steps:
     - uses: actions/checkout@v2
 
@@ -43,5 +46,5 @@ jobs:
         tags: |
           yangclivia/gpt4-copilot-java:${{ steps.tag_name.outputs.tag }}-jar
           yangclivia/gpt4-copilot-java:latest-jar
-        platforms: linux/amd64,linux/arm64/v8
+        platforms: ${{ matrix.platform }}
         build-args: TARGETPLATFORM=${{ matrix.platform }}
