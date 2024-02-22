@@ -30,7 +30,10 @@ jobs:
       with:
         graalvm-version: '21.3.0' # Ensure this version is compatible with Java 17
         java-version: '17'
-
+        
+    - name: Set execute permissions for mvnw
+      run: chmod +x ./mvnw
+      
     - name: Build native image with Maven
       run: ./mvnw native:compile -Pnative
 
