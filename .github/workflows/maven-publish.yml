@@ -26,7 +26,7 @@ jobs:
         restore-keys: ${{ runner.os }}-m2
 
     - name: Install GraalVM compatible with Java 17
-      uses: gluonhq/setup-graalvm-ce@v1
+      uses: DeLaGuardo/setup-graalvm@5.0
       with:
         graalvm-version: '21.3.0' # Make sure this version is compatible with Java 17
         java-version: '17'
