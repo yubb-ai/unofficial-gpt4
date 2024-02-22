@@ -15,7 +15,6 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
-        arch: [amd64, arm64]
     steps:
     - uses: actions/checkout@v2
 
@@ -24,7 +23,6 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        architecture: ${{ matrix.arch }}
 
     - name: Cache Maven packages
       uses: actions/cache@v2
