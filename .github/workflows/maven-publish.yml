@@ -32,8 +32,8 @@ jobs:
         java-version: '17'
         
     - name: Set JAVA_HOME to GraalVM
-      run: echo "JAVA_HOME=$(java -version 2>&1 | awk -F\" '/version/ {print \$2}')-$(uname -s | tr '[:upper:]' '[:lower:]')" | tee -a $GITHUB_ENV
-
+      run: echo "JAVA_HOME=${{ env.GRAALVM_HOME }}" >> $GITHUB_ENV
+ 
     - name: Set execute permissions for mvnw
       run: chmod +x ./mvnw
       
