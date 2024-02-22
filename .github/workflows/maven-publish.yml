@@ -61,6 +61,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./target/gpt-4-copilot # Make sure this is the correct path to your built artifact
-        asset_name: gpt-4-copilot-0.4.0-${{ matrix.os }}-${{ matrix.arch }} # Make sure this is the correct name of your built artifact
+        asset_path: /target/gpt-4-copilot # Make sure this is the correct path to your built artifact
+        asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }} # Make sure this is the correct name of your built artifact
         asset_content_type: application/octet-stream
