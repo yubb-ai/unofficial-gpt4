@@ -41,6 +41,6 @@ jobs:
     - name: Upload native image from target folder
       uses: actions/upload-artifact@v2
       with:
-        name: native-image
+        name: gpt-4-copilot
         path: target/gpt-4-copilot-0.4.0 # Replace your-binary-name with the actual name of your binary file
 
