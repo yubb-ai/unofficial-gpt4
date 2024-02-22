@@ -42,5 +42,5 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: gpt-4-copilot
-        path: target/gpt-4-copilot-0.4.0 # Replace your-binary-name with the actual name of your binary file
+        path: target/gpt-4-copilot # Replace your-binary-name with the actual name of your binary file
 
