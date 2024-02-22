@@ -28,8 +28,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 使用 Maven 构建原生镜像
-        run: mvn -Pnative -DskipTests package
+      - name: Set execute permissions for mvnw
+        run: chmod +x ./mvnw
+
+      - name: Build native image with Maven
+        run: ./mvnw native:compile -Pnative
 
       - name: 将原生可执行文件重命名并移动到 target 目录
         run: |
