@@ -1,4 +1,4 @@
-namname: Build and Upload Spring Boot Native Image with Maven
+name: Build and Upload Spring Boot Native Image with Maven
 
 on:
   push:
