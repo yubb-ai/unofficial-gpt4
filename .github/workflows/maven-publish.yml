@@ -25,23 +25,20 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
-    - name: Install GraalVM
-      uses: DeLaGuardo/setup-graalvm@5.0
+    - name: Install GraalVM compatible with Java 17
+      uses: gluonhq/setup-graalvm-ce@v1
       with:
-        graalvm-version: '21.3.0' # Ensure this version is compatible with Java 17
+        graalvm-version: '21.3.0' # Make sure this version is compatible with Java 17
         java-version: '17'
-        
-    - name: Set JAVA_HOME to GraalVM
-      run: echo "JAVA_HOME=${{ env.GRAALVM_HOME }}" >> $GITHUB_ENV
- 
+
+    - name: Install native-image component
+      run: gu install native-image
+
     - name: Set execute permissions for mvnw
       run: chmod +x ./mvnw
-      
+
     - name: Build native image with Maven
       run: ./mvnw native:compile -Pnative
-
-    - name: Move binary to target folder
-      run: mv ./gpt-4-copilot-0.0.4 ./target/gpt-4-copilot-0.0.4  Replace your-binary-name with the actual name of your binary file
 
     - name: Upload native image from target folder
       uses: actions/upload-artifact@v2
