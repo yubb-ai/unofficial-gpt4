@@ -18,6 +18,15 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Set tag name
+      id: tag_name
+      run: |
+        if [ "${{ github.event_name }}" = "release" ]; then
+          echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
+        elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "::set-output name=tag::${{ github.event.inputs.tag }}"
+        fi
+
     - name: Set up JDK 17
       uses: actions/setup-java@v2
       with:
