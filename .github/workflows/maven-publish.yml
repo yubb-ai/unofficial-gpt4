@@ -52,7 +52,13 @@ jobs:
       run: chmod +x ./mvnw
 
     - name: Build native image with Maven
-      run: ./mvnw native:compile -Pnative
+      run: |
+        ./mvnw native:compile -Pnative
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          mv ./target/gpt-4-copilot.exe ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe
+        else
+          mv ./target/gpt-4-copilot ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}
+        fi
 
     - name: Check if release exists
       id: check_release
@@ -86,6 +92,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.check_release.outputs.exists == 'true' && steps.check_release.outputs.upload_url || steps.create_release.outputs.upload_url }}
-        asset_path: ./target/gpt-4-copilot # 更新为您的构建产物路径
-        asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.tar.gz # 确保这是您构建产物的正确名称
+        asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+        asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}
         asset_content_type: application/octet-stream
