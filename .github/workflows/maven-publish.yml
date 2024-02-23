@@ -93,6 +93,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.check_release.outputs.exists == 'true' && steps.check_release.outputs.upload_url || steps.create_release.outputs.upload_url }}
-        asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}${{ matrix.os == 'windows-latest' ? '.exe' : '' }}
-        asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}${{ matrix.os == 'windows-latest' ? '.exe' : '' }}
+        asset_path: ${{ format('./target/gpt-4-copilot-{0}-{1}{2}', steps.tag_name.outputs.tag, matrix.os, matrix.os == 'windows-latest' ? '.exe' : '') }}
+        asset_name: ${{ format('gpt-4-copilot-{0}-{1}{2}', steps.tag_name.outputs.tag, matrix.os, matrix.os == 'windows-latest' ? '.exe' : '') }}
         asset_content_type: application/octet-stream
+
