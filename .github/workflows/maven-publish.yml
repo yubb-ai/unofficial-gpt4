@@ -61,6 +61,21 @@ jobs:
         fi
       shell: bash
 
+    - name: Create directory for packaging
+      run: |
+        mkdir packaging
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe ./packaging/gpt-4-copilot.exe
+        else
+          cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }} ./packaging/gpt-4-copilot
+        fi
+        cp ./config.json ./packaging/config.json
+
+    - name: Create ZIP
+      uses: montudor/action-zip@v0.1.1
+      with:
+        args: zip -r ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip ./packaging
+
     - name: Check if release exists
       id: check_release
       run: |
@@ -87,24 +102,12 @@ jobs:
         draft: false
         prerelease: false
 
-    - name: Upload native image to Release (Windows)
-      if: matrix.os == 'windows-latest'
+    - name: Upload ZIP to Release
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.check_release.outputs.exists == 'true' && steps.check_release.outputs.upload_url || steps.create_release.outputs.upload_url }}
-        asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe
-        asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe
-        asset_content_type: application/octet-stream
-
-    - name: Upload native image to Release (Non-Windows)
-      if: matrix.os != 'windows-latest'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.check_release.outputs.exists == 'true' && steps.check_release.outputs.upload_url || steps.create_release.outputs.upload_url }}
-        asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}
-        asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}
-        asset_content_type: application/octet-stream
+        asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
+        asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
+        asset_content_type: application/zip
