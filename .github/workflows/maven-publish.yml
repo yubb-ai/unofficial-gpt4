@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
     - uses: actions/checkout@v2
 
@@ -54,12 +54,12 @@ jobs:
     - name: Build native image with Maven
       run: |
         ./mvnw native:compile -Pnative
-        if ("${{ matrix.os }}" -eq "windows-latest") {
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
           mv ./target/gpt-4-copilot.exe ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe
-        } else {
+        else
           mv ./target/gpt-4-copilot ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}
-        }
-      shell: pwsh
+        fi
+      shell: bash
 
     - name: Check if release exists
       id: check_release
