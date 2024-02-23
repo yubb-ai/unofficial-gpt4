@@ -70,12 +70,14 @@ jobs:
           cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }} ./packaging/gpt-4-copilot
         fi
         cp ./config.json ./packaging/config.json
+      shell: bash
 
     - name: Create ZIP (Unix)
       if: runner.os != 'Windows'
       run: |
         cd packaging
         zip -r ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip .
+      shell: bash
 
     - name: Create ZIP (Windows)
       if: runner.os == 'Windows'
