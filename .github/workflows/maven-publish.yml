@@ -71,10 +71,17 @@ jobs:
         fi
         cp ./config.json ./packaging/config.json
 
-    - name: Create ZIP
-      uses: montudor/action-zip@v0.1.1
-      with:
-        args: zip -r ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip ./packaging
+    - name: Create ZIP (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        cd packaging
+        zip -r ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip .
+
+    - name: Create ZIP (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        Compress-Archive -Path packaging/* -DestinationPath ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
+      shell: powershell
 
     - name: Check if release exists
       id: check_release
