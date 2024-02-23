@@ -83,7 +83,7 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         Compress-Archive -Path packaging/* -DestinationPath ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
-      shell: powershell
+      shell: bash
 
     - name: Check if release exists
       id: check_release
