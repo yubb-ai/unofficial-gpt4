@@ -51,6 +51,9 @@ jobs:
     - name: Set execute permissions for mvnw
       run: chmod +x ./mvnw
 
+    - name: Set UTF-8 Encoding
+      run: echo "JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8" >> $GITHUB_ENV
+
     - name: Build native image with Maven
       run: |
         ./mvnw native:compile -Pnative
@@ -120,3 +123,4 @@ jobs:
         asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
         asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
         asset_content_type: application/zip
+
