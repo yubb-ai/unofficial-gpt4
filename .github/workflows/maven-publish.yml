@@ -11,21 +11,17 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}-${{ matrix.arch }}
     strategy:
       matrix:
-        os: [ubuntu-latest-amd64,ubuntu-latest-arm64,macos-latest-amd64,macos-latest-arm64,windows-latest-amd64,windows-latest-arm64]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        arch: [arm64, amd64]
     steps:
     - uses: actions/checkout@v2
 
     - name: Set tag name
       id: tag_name
-      run: |
-        if [ "${{ github.event_name }}" = "release" ]; then
-          echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
-        elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "::set-output name=tag::${{ github.event.inputs.tag }}"
-        fi
+      run: echo "::set-output name=tag::${{ github.event_name == 'release' && github.ref#refs/tags/ || github.event.inputs.tag }}"
       shell: bash
 
     - name: Set up JDK 17
@@ -54,53 +50,35 @@ jobs:
     - name: Set UTF-8 Encoding
       run: echo "JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8" >> $GITHUB_ENV
 
-    - name: Build native image with Maven
+    - name: Build and Rename native image with Maven
       run: |
         ./mvnw native:compile -Pnative
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          mv ./target/gpt-4-copilot.exe ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe
-        else
-          mv ./target/gpt-4-copilot ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}
-        fi
+        mv ./target/gpt-4-copilot* ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}${{ runner.os == 'Windows' && '.exe' || '' }}
       shell: bash
 
-    - name: Create directory for packaging
+    - name: Package the executable
       run: |
         mkdir packaging
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe ./packaging/gpt-4-copilot.exe
-        else
-          cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }} ./packaging/gpt-4-copilot
-        fi
+        cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}* ./packaging/
         cp ./config.json ./packaging/config.json
       shell: bash
 
-    - name: Create ZIP (Unix)
-      if: runner.os != 'Windows'
+    - name: Create ZIP
       run: |
         cd packaging
-        zip -r ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip .
-      shell: bash
-
-    - name: Create ZIP (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        Compress-Archive -Path packaging/* -DestinationPath ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
-      shell: powershell
+        ${${ runner.os == 'Windows' } && 'Compress-Archive -Path * -DestinationPath ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip' || 'zip -r ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip .'}
+      shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
 
     - name: Check if release exists
       id: check_release
-      run: |
-        RELEASE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-        https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ steps.tag_name.outputs.tag }}) || true
-        if echo "$RELEASE" | grep -q '"id":'; then
-          echo "::set-output name=exists::true"
-          UPLOAD_URL=$(echo "$RELEASE" | jq -r .upload_url)
-          echo "::set-output name=upload_url::${UPLOAD_URL}"
-        else
-          echo "::set-output name=exists::false"
-        fi
-      shell: bash
+      uses: actions/github-script@v5
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const { owner, repo } = context.repo
+          const tag = "${{ steps.tag_name.outputs.tag }}"
+          let release = await github.repos.getReleaseByTag({ owner, repo, tag }).catch(() => ({ data: {} }))
+          return { exists: !!release.data.id, upload_url: release.data.upload_url }
 
     - name: Create Release if not exists
       if: steps.check_release.outputs.exists == 'false'
@@ -120,7 +98,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.check_release.outputs.exists == 'true' && steps.check_release.outputs.upload_url || steps.create_release.outputs.upload_url }}
-        asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
-        asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
+        asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip
+        asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip
         asset_content_type: application/zip
 
