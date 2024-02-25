@@ -3,6 +3,7 @@ package com.gpt4.copilot.controller;
 import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gpt4.copilot.copilotApplication;
 import com.gpt4.copilot.pojo.Result;
 import com.gpt4.copilot.pojo.systemSetting;
 import jakarta.servlet.http.HttpServletRequest;
@@ -59,7 +60,7 @@ public class chatController {
     private static final String machineId;
     private final static String get_cocopilotToken_url = "https://api.cocopilot.org/copilot_internal/v2/token";
     private final static String github_get_token_url = "https://api.github.com/copilot_internal/v2/token";
-    private final static String github_chat = "https://api.githubcopilot.com/chat/completions";
+    private final static String github_chat_url = "https://api.githubcopilot.com/chat/completions";
     private final static String github_embaddings = "https://api.githubcopilot.com/embeddings";
     /**
      * gpt4单字符睡眠时间
@@ -81,6 +82,10 @@ public class chatController {
      * 自定义vscode_version
      */
     private static String vscode_version;
+    /**
+     * 自定义copilot_chat_version;
+     */
+    private static String copilot_chat_version;
     /**
      * 自定义maxPoolSize
      */
@@ -107,8 +112,17 @@ public class chatController {
         setPassword(systemSetting.getPassword());
         setGet_token_url(systemSetting.getGet_token_url());
         setVscode_version(systemSetting.getVscode_version());
+        setCopilot_chat_version(systemSetting.getCopilot_chat_version());
         setMaxPoolSize(systemSetting.getMaxPoolSize());
         setExecutor(systemSetting.getMaxPoolSize());
+    }
+
+    public static String getCopilot_chat_version() {
+        return copilot_chat_version;
+    }
+
+    public static void setCopilot_chat_version(String copilot_chat_version) {
+        chatController.copilot_chat_version = copilot_chat_version;
     }
 
     public static String getVscode_version() {
@@ -198,10 +212,10 @@ public class chatController {
             // 将 JSON 字符串解析为 JSONObject
             JSONObject jsonObject = new JSONObject(jsonContent);
             try {
-                jsonObject.getInt("gpt4_sleepTime");
+                jsonObject.getString("password");
             } catch (JSONException e) {
-                jsonObject.put("gpt4_sleepTime", "100");
-                log.info("config.json没有新增gpt4_sleepTime参数,现已增加！");
+                jsonObject.put("password", UUID.randomUUID().toString());
+                log.info("config.json没有新增password参数,现已增加！");
                 exist = false;
             }
             try {
@@ -212,10 +226,39 @@ public class chatController {
                 exist = false;
             }
             try {
-                jsonObject.getString("password");
+                jsonObject.getInt("gpt4_sleepTime");
             } catch (JSONException e) {
-                jsonObject.put("password", UUID.randomUUID().toString());
-                log.info("config.json没有新增password参数,现已增加！");
+                jsonObject.put("gpt4_sleepTime", "100");
+                log.info("config.json没有新增gpt4_sleepTime参数,现已增加！");
+                exist = false;
+            }
+            try {
+                jsonObject.getInt("maxPoolSize");
+            } catch (JSONException e) {
+                jsonObject.put("maxPoolSize", 300);
+                log.info("config.json没有新增maxPoolSize参数,现已增加！");
+                exist = false;
+            }
+
+            try {
+                jsonObject.getString("vscode_version");
+            } catch (JSONException e) {
+                String latestVSCodeVersion = copilotApplication.getLatestVSCodeVersion();
+                if (latestVSCodeVersion != null) {
+                    jsonObject.put("vscode_version", latestVSCodeVersion);
+                    log.info("config.json没有新增vscode_version参数,现已增加！");
+                }
+                exist = false;
+            }
+
+            try {
+                jsonObject.getString("copilot_chat_version");
+            } catch (JSONException e) {
+                String latestChatVersion = copilotApplication.getLatestExtensionVersion("GitHub", "copilot-chat");
+                if (latestChatVersion != null) {
+                    jsonObject.put("copilot_chat_version", latestChatVersion);
+                    log.info("config.json没有新增copilot_chat_version参数,现已增加！");
+                }
                 exist = false;
             }
 
@@ -226,31 +269,15 @@ public class chatController {
                 log.info("config.json没有新增get_token_url参数,现已增加！");
                 exist = false;
             }
-
-            try {
-                jsonObject.getString("vscode_version");
-            } catch (JSONException e) {
-                jsonObject.put("vscode_version", "vscode/1.85.2");
-                log.info("config.json没有新增vscode_version参数,现已增加！");
-                exist = false;
-            }
-
-            try {
-                jsonObject.getInt("maxPoolSize");
-            } catch (JSONException e) {
-                jsonObject.put("maxPoolSize", 300);
-                log.info("config.json没有新增maxPoolSize参数,现已增加！");
-                exist = false;
-            }
-
             // 将 JSONObject 转换为 Config 类的实例
             systemSetting config = new systemSetting();
-            config.setGpt4_sleepTime(jsonObject.optInt("gpt4_sleepTime"));
-            config.setGpt3_sleepTime(jsonObject.optInt("gpt3_sleepTime"));
             config.setPassword(jsonObject.optString("password"));
-            config.setGet_token_url(jsonObject.optString("get_token_url"));
-            config.setVscode_version(jsonObject.optString("vscode_version"));
             config.setMaxPoolSize(jsonObject.optInt("maxPoolSize"));
+            config.setGpt3_sleepTime(jsonObject.optInt("gpt3_sleepTime"));
+            config.setGpt4_sleepTime(jsonObject.optInt("gpt4_sleepTime"));
+            config.setVscode_version(jsonObject.optString("vscode_version"));
+            config.setCopilot_chat_version(jsonObject.optString("copilot_chat_version"));
+            config.setGet_token_url(jsonObject.optString("get_token_url"));
 
             if (exist == false) {
                 // 将修改后的 JSONObject 转换为格式化的 JSON 字符串
@@ -347,7 +374,7 @@ public class chatController {
                         .addHeader("Host", "api.github.com")
                         .addHeader("authorization", "token " + apiKey)
                         .addHeader("Editor-Version", vscode_version)
-                        .addHeader("Editor-Plugin-Version", "copilot-chat/0.11.1")
+                        .addHeader("Editor-Plugin-Version", "copilot-chat/" + copilot_chat_version)
                         .addHeader("User-Agent", "GitHubCopilotChat/0.11.1")
                         .addHeader("Accept", "*/*").build();
                 try (Response res = client.newCall(request_token).execute()) {
@@ -430,7 +457,7 @@ public class chatController {
                 // 创建一个 RequestBody 对象
                 MediaType JSON = MediaType.get("application/json; charset=utf-8");
                 RequestBody requestBody = RequestBody.create(json, JSON);
-                Request.Builder requestBuilder = new Request.Builder().url(github_chat).post(requestBody);
+                Request.Builder requestBuilder = new Request.Builder().url(github_chat_url).post(requestBody);
                 headersMap.forEach(requestBuilder::addHeader);
                 Request streamRequest = requestBuilder.build();
                 try (Response resp = client.newCall(streamRequest).execute()) {
@@ -517,7 +544,7 @@ public class chatController {
                 // 创建一个 RequestBody 对象
                 MediaType JSON = MediaType.get("application/json; charset=utf-8");
                 RequestBody requestBody = RequestBody.create(json, JSON);
-                Request.Builder requestBuilder = new Request.Builder().url(github_chat).post(requestBody);
+                Request.Builder requestBuilder = new Request.Builder().url(github_chat_url).post(requestBody);
                 headersMap.forEach(requestBuilder::addHeader);
                 Request streamRequest = requestBuilder.build();
                 try (Response resp = client.newCall(streamRequest).execute()) {
@@ -590,7 +617,7 @@ public class chatController {
                 // 创建一个 RequestBody 对象
                 MediaType JSON = MediaType.get("application/json; charset=utf-8");
                 RequestBody requestBody = RequestBody.create(json, JSON);
-                Request.Builder requestBuilder = new Request.Builder().url(github_chat).post(requestBody);
+                Request.Builder requestBuilder = new Request.Builder().url(github_chat_url).post(requestBody);
                 headersMap.forEach(requestBuilder::addHeader);
                 Request streamRequest = requestBuilder.build();
                 try (Response resp = client.newCall(streamRequest).execute()) {
@@ -650,7 +677,7 @@ public class chatController {
             // 创建一个 RequestBody 对象
             MediaType JSON = MediaType.get("application/json; charset=utf-8");
             RequestBody requestBody = RequestBody.create(json, JSON);
-            Request.Builder requestBuilder = new Request.Builder().url(github_chat).post(requestBody);
+            Request.Builder requestBuilder = new Request.Builder().url(github_chat_url).post(requestBody);
             headersMap.forEach(requestBuilder::addHeader);
             Request streamRequest = requestBuilder.build();
             try (Response resp = client.newCall(streamRequest).execute()) {
@@ -962,8 +989,8 @@ public class chatController {
                 .addHeader("Host", "api.github.com")
                 .addHeader("authorization", "token " + apiKey)
                 .addHeader("Editor-Version", vscode_version)
-                .addHeader("Editor-Plugin-Version", "copilot-chat/0.11.1")
-                .addHeader("User-Agent", "GitHubCopilotChat/0.11.1")
+                .addHeader("Editor-Plugin-Version", "copilot-chat/" + copilot_chat_version)
+                .addHeader("User-Agent", "GitHubCopilotChat/" + copilot_chat_version)
                 .addHeader("Accept", "*/*").build();
         try (Response response = client.newCall(request).execute()) {
             log.info(response.toString());
@@ -989,8 +1016,8 @@ public class chatController {
         Request request = new Request.Builder().url(get_cocopilotToken_url)
                 .addHeader("authorization", "token " + apiKey)
                 .addHeader("Editor-Version", vscode_version)
-                .addHeader("Editor-Plugin-Version", "copilot-chat/0.11.1")
-                .addHeader("User-Agent", "GitHubCopilotChat/0.11.1")
+                .addHeader("Editor-Plugin-Version", "copilot-chat/" + copilot_chat_version)
+                .addHeader("User-Agent", "GitHubCopilotChat/" + copilot_chat_version)
                 .addHeader("Accept", "*/*").build();
         try (Response response = client.newCall(request).execute()) {
             log.info(response.toString());
@@ -1016,8 +1043,8 @@ public class chatController {
         Request request = new Request.Builder().url(get_token_url)
                 .addHeader("authorization", "token " + apiKey)
                 .addHeader("Editor-Version", vscode_version)
-                .addHeader("Editor-Plugin-Version", "copilot-chat/0.11.1")
-                .addHeader("User-Agent", "GitHubCopilotChat/0.11.1")
+                .addHeader("Editor-Plugin-Version", "copilot-chat/" + copilot_chat_version)
+                .addHeader("User-Agent", "GitHubCopilotChat/" + copilot_chat_version)
                 .addHeader("Accept", "*/*").build();
         try (Response response = client.newCall(request).execute()) {
             log.info(response.toString());
@@ -1087,11 +1114,11 @@ public class chatController {
         headersMap.put("Vscode-Sessionid", UUID.randomUUID().toString() + System.currentTimeMillis());
         headersMap.put("vscode-machineid", machineId);
         headersMap.put("Editor-Version", vscode_version);
-        headersMap.put("Editor-Plugin-Version", "copilot-chat/0.11.1");
+        headersMap.put("Editor-Plugin-Version", "copilot-chat/" + copilot_chat_version);
         headersMap.put("Openai-Organization", "github-copilot");
         headersMap.put("Copilot-Integration-Id", "vscode-chat");
         headersMap.put("Openai-Intent", "conversation-panel");
-        headersMap.put("User-Agent", "GitHubCopilotChat/0.11.1");
+        headersMap.put("User-Agent", "GitHubCopilotChat/" + copilot_chat_version);
     }
 
     /**
@@ -1124,7 +1151,7 @@ public class chatController {
                         Thread.sleep(sleep_time);
                     }
                 }
-                log.info("使用模型：" + model + "，字符间隔时间：" + sleep_time + "ms，响应：" + resp);
+                log.info("使用模型：" + model + "，vscode_version：" + vscode_version + "，copilot_chat_version：" + copilot_chat_version + "，字符间隔时间：" + sleep_time + "ms，响应：" + resp);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new IOException("Thread was interrupted", e);
@@ -1173,6 +1200,4 @@ public class chatController {
             throw new RuntimeException(e);
         }
     }
-
-
 }

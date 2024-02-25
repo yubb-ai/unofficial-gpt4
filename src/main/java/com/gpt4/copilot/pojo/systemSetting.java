@@ -47,6 +47,11 @@ public class systemSetting {
     private String vscode_version;
 
     /**
+     * copilot_chat_version
+     */
+    private String copilot_chat_version;
+
+    /**
      * maxPoolSize
      */
     private Integer maxPoolSize;
