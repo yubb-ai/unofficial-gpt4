@@ -21,7 +21,7 @@ jobs:
 
     - name: Set tag name
       id: tag_name
-      run: echo "::set-output name=tag::${{ github.event_name == 'release' && github.ref#refs/tags/ || github.event.inputs.tag }}"
+      run: echo "::set-output name=tag::${{ github.event_name == 'release' && github.ref.replace('refs/tags/', '') || github.event.inputs.tag }}"
       shell: bash
 
     - name: Set up JDK 17
@@ -53,7 +53,7 @@ jobs:
     - name: Build and Rename native image with Maven
       run: |
         ./mvnw native:compile -Pnative
-        mv ./target/gpt-4-copilot* ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}${{ runner.os == 'Windows' && '.exe' || '' }}
+        mv ./target/gpt-4-copilot* ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}
       shell: bash
 
     - name: Package the executable
@@ -66,8 +66,8 @@ jobs:
     - name: Create ZIP
       run: |
         cd packaging
-        ${${ runner.os == 'Windows' } && 'Compress-Archive -Path * -DestinationPath ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip' || 'zip -r ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip .'}
-      shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+        ${${ matrix.os == 'windows-latest' } && 'Compress-Archive -Path * -DestinationPath ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip' || 'zip -r ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip .'}
+      shell: ${{ matrix.os == 'windows-latest' && 'powershell' || 'bash' }}
 
     - name: Check if release exists
       id: check_release
@@ -101,4 +101,3 @@ jobs:
         asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip
         asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip
         asset_content_type: application/zip
-
