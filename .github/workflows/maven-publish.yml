@@ -59,9 +59,9 @@ jobs:
       run: |
         ./mvnw native:compile -Pnative
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          mv ./target/gpt-4-copilot.exe ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe
+          mv ./target/gpt-4-copilot.exe ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.exe
         else
-          mv ./target/gpt-4-copilot ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}
+          mv ./target/gpt-4-copilot ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}
         fi
       shell: bash
 
@@ -69,9 +69,9 @@ jobs:
       run: |
         mkdir packaging
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe ./packaging/gpt-4-copilot.exe
+          cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.exe ./packaging/gpt-4-copilot.exe
         else
-          cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }} ./packaging/gpt-4-copilot
+          cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }} ./packaging/gpt-4-copilot
         fi
         cp ./config.json ./packaging/config.json
       shell: bash
@@ -80,13 +80,13 @@ jobs:
       if: runner.os != 'Windows'
       run: |
         cd packaging
-        zip -r ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip .
+        zip -r ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip .
       shell: bash
 
     - name: Create ZIP (Windows)
       if: runner.os == 'Windows'
       run: |
-        Compress-Archive -Path packaging/* -DestinationPath ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
+        Compress-Archive -Path packaging/* -DestinationPath ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip
       shell: powershell
 
     - name: Check if release exists
@@ -121,7 +121,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.check_release.outputs.exists == 'true' && steps.check_release.outputs.upload_url || steps.create_release.outputs.upload_url }}
-        asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
-        asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
+        asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip
+        asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}-${{ matrix.arch }}.zip
         asset_content_type: application/zip
 
