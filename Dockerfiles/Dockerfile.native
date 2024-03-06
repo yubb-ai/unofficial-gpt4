@@ -13,7 +13,7 @@ RUN chmod +x mvnw && \
     rm -rf /root/.m2
     
 # Use a lightweight Linux base image with just enough runtime dependencies
-FROM photon:latest
+FROM container-registry.oracle.com/os/oraclelinux:8-slim
 
 # Set the timezone
 ENV TZ=Asia/Shanghai
