@@ -9,7 +9,7 @@ COPY . /build
 
 # Build with a more generic CPU target
 RUN chmod +x mvnw && \
-    ./mvnw --no-transfer-progress package -Pnative \
+    ./mvnw package -Pnative \
         -Dquarkus.native.additional-build-args=-H:-UseAdvancedInstructionSets && \
     rm -rf /root/.m2
 
