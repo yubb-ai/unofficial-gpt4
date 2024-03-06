@@ -9,9 +9,8 @@ COPY . /build
 
 # Build
 RUN chmod +x mvnw && \
-    ./mvnw --no-transfer-progress native:compile -Pnative -Dquarkus.native.additional-build-args=-H:NativeImageOptions=-march=ivybridge && \
+    ./mvnw --no-transfer-progress native:compile -Pnative -Dquarkus.native.additional-build-args=-H:+ReportExceptionStackTraces,-J-Xmx4g,-H:CompilerBackend=llvm,-H:NativeLinkerOption=-march=ivybridge && \
     rm -rf /root/.m2
-
     
 # Use a lightweight Linux base image with just enough runtime dependencies
 FROM photon:latest
