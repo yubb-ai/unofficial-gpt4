@@ -9,8 +9,7 @@ COPY . /build
 
 # Build with a more generic CPU target
 RUN chmod +x mvnw && \
-    ./mvnw package -Pnative \
-        -Dquarkus.native.additional-build-args=-H:-UseAdvancedInstructionSets && \
+    ./mvnw --no-transfer-progress native:compile -Pnative && \
     rm -rf /root/.m2
 
 # Use a lightweight Linux base image with just enough runtime dependencies
