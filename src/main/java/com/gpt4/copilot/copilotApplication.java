@@ -1,8 +1,8 @@
 package com.gpt4.copilot;
 
 
-import com.gpt4.copilot.controller.chatController;
-import com.gpt4.copilot.pojo.systemSetting;
+import com.gpt4.copilot.controller.ChatController;
+import com.gpt4.copilot.pojo.SystemSetting;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -36,13 +36,13 @@ public class copilotApplication {
 
     public static void main(String[] args) throws Exception {
         String configFilePath = System.getProperty("user.dir") + File.separator + "config.json";
-        systemSetting config = loadConfig(configFilePath);
+        SystemSetting config = loadConfig(configFilePath);
         setSystemProperties(config);
         SpringApplication.run(copilotApplication.class, args);
         printStartupMessage(config);
     }
 
-    private static systemSetting loadConfig(String configFilePath) {
+    private static SystemSetting loadConfig(String configFilePath) {
         File jsonFile = new File(configFilePath);
         if (!jsonFile.exists()) {
             createEmptyConfigFile(configFilePath);
@@ -71,9 +71,9 @@ public class copilotApplication {
         }
     }
 
-    private static systemSetting parseConfig(String configFilePath, JSONObject jsonObject) {
+    private static SystemSetting parseConfig(String configFilePath, JSONObject jsonObject) {
         try {
-            systemSetting config = new systemSetting();
+            SystemSetting config = new SystemSetting();
             config.setServerPort(getIntOrDefault(jsonObject, "serverPort", 8080));
             config.setPrefix(getStringOrDefault(jsonObject, "prefix", "/"));
             String updatedJson = jsonObject.toString(2);
@@ -110,7 +110,7 @@ public class copilotApplication {
         }
     }
 
-    private static void setSystemProperties(systemSetting config) {
+    private static void setSystemProperties(SystemSetting config) {
         System.setProperty("server.port", String.valueOf(config.getServerPort()));
         System.setProperty("server.servlet.context-path", config.getPrefix());
     }
@@ -177,10 +177,10 @@ public class copilotApplication {
             String latestVersion = getLatestVSCodeVersion();
             String latestChatVersion = getLatestExtensionVersion("GitHub", "copilot-chat");
             if (latestVersion != null && latestChatVersion != null) {
-                chatController.setVscode_version(latestVersion);
-                chatController.setCopilot_chat_version("copilot-chat/" + latestChatVersion);
+                ChatController.setVscode_version(latestVersion);
+                ChatController.setCopilot_chat_version("copilot-chat/" + latestChatVersion);
             }
-            String parent = chatController.selectFile();
+            String parent = ChatController.selectFile();
             // 读取 JSON 文件内容
             String jsonContent = new String(Files.readAllBytes(Paths.get(parent)));
             JSONObject jsonObject = new JSONObject(jsonContent);
@@ -190,31 +190,30 @@ public class copilotApplication {
             String updatedJson = jsonObject.toString(2);
             Files.write(Paths.get(parent), updatedJson.getBytes());
             System.out.println("===================配置更新说明========================");
-            System.out.println("vscode_version：" + chatController.getVscode_version());
-            System.out.println("copilot_chat_version：" + chatController.getCopilot_chat_version());
+            System.out.println("vscode_version：" + ChatController.getVscode_version());
+            System.out.println("copilot_chat_version：" + ChatController.getCopilot_chat_version());
             System.out.println("======================================================");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static void printStartupMessage(systemSetting config) {
+    private static void printStartupMessage(SystemSetting config) {
         System.out.println("\n=====================配置说明==========================");
         System.out.println("serverPort：" + config.getServerPort());
         System.out.println("prefix：" + config.getPrefix());
-        System.out.println("password：" + chatController.getPassword());
-        System.out.println("maxPoolSize：" + chatController.getMaxPoolSize());
-        System.out.println("gpt3_sleepTime：" + chatController.getGpt3_sleepTime());
-        System.out.println("gpt4_sleepTime：" + chatController.getGpt4_sleepTime());
-        System.out.println("vscode_version：" + chatController.getVscode_version());
-        System.out.println("copilot_chat_version：" + chatController.getCopilot_chat_version());
-        System.out.println("get_token_url：" + chatController.getGet_token_url());
+        System.out.println("password：" + ChatController.getPassword());
+        System.out.println("maxPoolSize：" + ChatController.getMaxPoolSize());
+        System.out.println("gpt3_sleepTime：" + ChatController.getGpt3_sleepTime());
+        System.out.println("gpt4_sleepTime：" + ChatController.getGpt4_sleepTime());
+        System.out.println("vscode_version：" + ChatController.getVscode_version());
+        System.out.println("copilot_chat_version：" + ChatController.getCopilot_chat_version());
+        System.out.println("get_token_url：" + ChatController.getGet_token_url());
         System.out.println("gpt4-copilot-java 初始化接口成功！");
         System.out.println("======================================================");
-        System.out.println("******原神gpt4-copilot-java-native v0.0.5启动成功******");
+        System.out.println("******原神gpt4-copilot-java-native v0.0.6启动成功******");
         System.out.println("* 采用graalvm打包，运行内存大幅度减小");
-        System.out.println("* jar包和二进制文件兼容基本所有系统");
-        System.out.println("* 每隔三天自动更新vscode版本和copilot-chat版本");
+        System.out.println("* 适配官方requestBody,减小被查询异常");
         System.out.println("URL地址：http://0.0.0.0:" + config.getServerPort() + config.getPrefix() + "");
         System.out.println("======================================================");
     }
