@@ -1,6 +1,5 @@
 package com.gpt4.copilot.controller;
 
-import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gpt4.copilot.copilotApplication;
@@ -17,6 +16,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -56,6 +56,18 @@ public class ChatController {
      * 缓存selfToken
      */
     private static final HashMap<String, String> selfTokenList;
+    /**
+     * 缓存cocopilotToken_limit
+     */
+    private static final ConcurrentHashMap<String, AtomicInteger> copilotTokenLimitList;
+    /**
+     * 缓存copilotToken_limit
+     */
+    private static final ConcurrentHashMap<String, AtomicInteger> coCopilotTokenLimitList;
+    /**
+     * 缓存selfToken_limit
+     */
+    private static final ConcurrentHashMap<String, AtomicInteger> selfTokenLimitList;
     /**
      * 模型
      */
@@ -109,6 +121,45 @@ public class ChatController {
      */
     private static Integer maxPoolSize;
     /**
+     * one copilot_token max requests per minute
+     */
+    private static Integer one_copilot_limit;
+
+    public static Integer getOne_copilot_limit() {
+        return one_copilot_limit;
+    }
+
+    public static void setOne_copilot_limit(Integer one_copilot_limit) {
+        ChatController.one_copilot_limit = one_copilot_limit;
+    }
+
+    public static Integer getOne_coCopilot_limit() {
+        return one_coCopilot_limit;
+    }
+
+    public static void setOne_coCopilot_limit(Integer one_coCopilot_limit) {
+        ChatController.one_coCopilot_limit = one_coCopilot_limit;
+    }
+
+    public static Integer getOne_selfCopilot_limit() {
+        return one_selfCopilot_limit;
+    }
+
+    public static void setOne_selfCopilot_limit(Integer one_selfCopilot_limit) {
+        ChatController.one_selfCopilot_limit = one_selfCopilot_limit;
+    }
+
+    /**
+     * one coCopilot_token max requests per minute
+     */
+    private static Integer one_coCopilot_limit;
+
+    /**
+     * one selfCopilot_token max requests per minute
+     */
+    private static Integer one_selfCopilot_limit;
+
+    /**
      * 定义okhttp库
      */
     private static OkHttpClient client = new OkHttpClient.Builder().connectTimeout(3, TimeUnit.MINUTES)
@@ -139,6 +190,9 @@ public class ChatController {
         selfTokenList = new HashMap<>();
         copilotTokenList = new HashMap<>();
         coCopilotTokenList = new HashMap<>();
+        selfTokenLimitList = new ConcurrentHashMap<>();
+        copilotTokenLimitList = new ConcurrentHashMap<>();
+        coCopilotTokenLimitList = new ConcurrentHashMap<>();
         machineId = generateMachineId();
         SystemSetting systemSetting = selectSetting();
         setGpt4_sleepTime(systemSetting.getGpt4_sleepTime());
@@ -149,6 +203,10 @@ public class ChatController {
         setCopilot_chat_version(systemSetting.getCopilot_chat_version());
         setMaxPoolSize(systemSetting.getMaxPoolSize());
         setExecutor(systemSetting.getMaxPoolSize());
+        setOne_copilot_limit(systemSetting.getOne_copilot_limit());
+        setOne_coCopilot_limit(systemSetting.getOne_coCopilot_limit());
+        setOne_selfCopilot_limit(systemSetting.getOne_selfCopilot_limit());
+
     }
 
     public static String getCopilot_chat_version() {
@@ -210,6 +268,8 @@ public class ChatController {
     public static void setGet_token_url(String get_token_url) {
         ChatController.get_token_url = get_token_url;
     }
+
+    public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
     /**
      * 初始化获取环境变量
@@ -306,6 +366,30 @@ public class ChatController {
                 log.info("config.json没有新增get_token_url参数,现已增加！");
                 exist = false;
             }
+
+            try {
+                jsonObject.getString("one_copilot_limit");
+            } catch (JSONException e) {
+                jsonObject.put("get_token_url", 30);
+                log.info("config.json没有新增one_copilot_limit参数,现已增加！");
+                exist = false;
+            }
+
+            try {
+                jsonObject.getString("one_coCopilot_limit");
+            } catch (JSONException e) {
+                jsonObject.put("one_coCopilot_limit", 30);
+                log.info("config.json没有新增one_coCopilot_limit参数,现已增加！");
+                exist = false;
+            }
+
+            try {
+                jsonObject.getString("one_selfCopilot_limit");
+            } catch (JSONException e) {
+                jsonObject.put("one_selfCopilot_limit", 30);
+                log.info("config.json没有新增one_selfCopilot_limit参数,现已增加！");
+                exist = false;
+            }
             // 将 JSONObject 转换为 Config 类的实例
             SystemSetting config = new SystemSetting();
             config.setPassword(jsonObject.optString("password"));
@@ -315,6 +399,9 @@ public class ChatController {
             config.setVscode_version(jsonObject.optString("vscode_version"));
             config.setCopilot_chat_version(jsonObject.optString("copilot_chat_version"));
             config.setGet_token_url(jsonObject.optString("get_token_url"));
+            config.setOne_copilot_limit(jsonObject.optInt("one_copilot_limit"));
+            config.setOne_coCopilot_limit(jsonObject.optInt("one_coCopilot_limit"));
+            config.setOne_selfCopilot_limit(jsonObject.optInt("one_selfCopilot_limit"));
 
             if (exist == false) {
                 // 将修改后的 JSONObject 转换为格式化的 JSON 字符串
@@ -326,6 +413,15 @@ public class ChatController {
             e.printStackTrace();
         }
         return null;
+    }
+
+    @Scheduled(cron = "0 */1 * * * ?")
+    public void resetLimit() {
+        ExecutorService updateExecutor = Executors.newFixedThreadPool(3);
+        updateExecutor.submit(() -> copilotTokenLimitList.replaceAll((k, v) -> new AtomicInteger(0)));
+        updateExecutor.submit(() -> coCopilotTokenLimitList.replaceAll((k, v) -> new AtomicInteger(0)));
+        updateExecutor.submit(() -> selfTokenLimitList.replaceAll((k, v) -> new AtomicInteger(0)));
+        updateExecutor.shutdown();
     }
 
     private static String generateMachineId() {
@@ -484,8 +580,15 @@ public class ChatController {
                     if (token == null) {
                         return new ResponseEntity<>(Result.error("Github Copilot APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                     }
+                    copilotTokenLimitList.putIfAbsent(apiKey, new AtomicInteger(1));
                     copilotTokenList.put(apiKey, token);
                     log.info("Github CopilotToken初始化成功！");
+                }
+                else {
+                    int requestNum = copilotTokenLimitList.get(apiKey).incrementAndGet();
+                    if(requestNum > one_copilot_limit){
+                        return new ResponseEntity<>(Result.error("current requests is "+ requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                    }
                 }
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
                 String chat_token = copilotTokenList.get(apiKey);
@@ -493,8 +596,6 @@ public class ChatController {
                 //添加头部
                 addHeader(headersMap, chat_token);
                 String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
-                // 创建一个 RequestBody 对象
-                MediaType JSON = MediaType.get("application/json; charset=utf-8");
                 RequestBody requestBody = RequestBody.create(json, JSON);
                 Request.Builder requestBuilder = new Request.Builder().url(github_chat_url).post(requestBody);
                 headersMap.forEach(requestBuilder::addHeader);
@@ -573,8 +674,15 @@ public class ChatController {
                     if (token == null) {
                         return new ResponseEntity<>(Result.error("cocopilot APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                     }
+                    coCopilotTokenLimitList.put(apiKey, new AtomicInteger(1));
                     coCopilotTokenList.put(apiKey, token);
                     log.info("coCopilotToken初始化成功！");
+                }
+                else {
+                    int requestNum = coCopilotTokenLimitList.get(apiKey).incrementAndGet();
+                    if(requestNum > one_coCopilot_limit){
+                        return new ResponseEntity<>(Result.error("current requests is "+ requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                    }
                 }
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
                 String chat_token = coCopilotTokenList.get(apiKey);
@@ -582,8 +690,6 @@ public class ChatController {
                 //添加头部
                 addHeader(headersMap, chat_token);
                 String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
-                // 创建一个 RequestBody 对象
-                MediaType JSON = MediaType.get("application/json; charset=utf-8");
                 RequestBody requestBody = RequestBody.create(json, JSON);
                 Request.Builder requestBuilder = new Request.Builder().url(github_chat_url).post(requestBody);
                 headersMap.forEach(requestBuilder::addHeader);
@@ -638,7 +744,14 @@ public class ChatController {
                         return new ResponseEntity<>(Result.error("自定义self APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                     }
                     selfTokenList.put(apiKey, token);
+                    selfTokenLimitList.put(apiKey,new AtomicInteger(1));
                     log.info("自定义selfToken初始化成功！");
+                }
+                else {
+                    int requestNum = selfTokenLimitList.get(apiKey).incrementAndGet();
+                    if(requestNum > one_selfCopilot_limit){
+                        return new ResponseEntity<>(Result.error("current requests is "+ requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                    }
                 }
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
                 String chat_token = selfTokenList.get(apiKey);
@@ -646,9 +759,6 @@ public class ChatController {
                 //添加头部
                 addHeader(headersMap, chat_token);
                 String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
-                log.info(conversation.toString());
-                // 创建一个 RequestBody 对象
-                MediaType JSON = MediaType.get("application/json; charset=utf-8");
                 RequestBody requestBody = RequestBody.create(json, JSON);
                 Request.Builder requestBuilder = new Request.Builder().url(github_chat_url).post(requestBody);
                 headersMap.forEach(requestBuilder::addHeader);
@@ -697,9 +807,7 @@ public class ChatController {
             Map<String, String> headersMap = new HashMap<>();
             //添加头部
             addHeader(headersMap, token);
-            String json = JSON.toJSONString(conversation);
-            // 创建一个 RequestBody 对象
-            MediaType JSON = MediaType.get("application/json; charset=utf-8");
+            String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
             RequestBody requestBody = RequestBody.create(json, JSON);
             Request.Builder requestBuilder = new Request.Builder().url(github_chat_url).post(requestBody);
             headersMap.forEach(requestBuilder::addHeader);
@@ -753,8 +861,15 @@ public class ChatController {
                     if (token == null) {
                         return new ResponseEntity<>(Result.error("Github Copilot APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                     }
+                    copilotTokenLimitList.put(apiKey, new AtomicInteger(1));
                     copilotTokenList.put(apiKey, token);
                     log.info("Github CopilotToken初始化成功！");
+                }
+                else {
+                    int requestNum = copilotTokenLimitList.get(apiKey).incrementAndGet();
+                    if(requestNum > one_copilot_limit){
+                        return new ResponseEntity<>(Result.error("current requests is "+ requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                    }
                 }
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
                 String chat_token = copilotTokenList.get(apiKey);
@@ -762,8 +877,6 @@ public class ChatController {
                 //添加头部
                 addHeader(headersMap, chat_token);
                 String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
-                // 创建一个 RequestBody 对象
-                MediaType JSON = MediaType.get("application/json; charset=utf-8");
                 RequestBody requestBody = RequestBody.create(json, JSON);
                 Request.Builder requestBuilder = new Request.Builder().url(github_embaddings).post(requestBody);
                 headersMap.forEach(requestBuilder::addHeader);
@@ -846,8 +959,15 @@ public class ChatController {
                     if (token == null) {
                         return new ResponseEntity<>(Result.error("copilot APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                     }
+                    coCopilotTokenLimitList.put(apiKey, new AtomicInteger(1));
                     coCopilotTokenList.put(apiKey, token);
                     log.info("coCopilotToken初始化成功！");
+                }
+                else {
+                    int requestNum = coCopilotTokenLimitList.get(apiKey).incrementAndGet();
+                    if(requestNum > one_coCopilot_limit){
+                        return new ResponseEntity<>(Result.error("current requests is "+ requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                    }
                 }
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
                 String chat_token = coCopilotTokenList.get(apiKey);
@@ -855,7 +975,6 @@ public class ChatController {
                 //添加头部
                 addHeader(headersMap, chat_token);
                 String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
-                MediaType JSON = MediaType.get("application/json; charset=utf-8");
                 RequestBody requestBody = RequestBody.create(json, JSON);
                 Request.Builder requestBuilder = new Request.Builder().url(github_embaddings).post(requestBody);
                 headersMap.forEach(requestBuilder::addHeader);
@@ -923,15 +1042,21 @@ public class ChatController {
                     if (token == null) {
                         return new ResponseEntity<>(Result.error("自定义APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                     }
+                    selfTokenLimitList.put(apiKey,new AtomicInteger(1));
                     selfTokenList.put(apiKey, token);
                     log.info("自定义selfToken初始化成功！");
+                }
+                else {
+                    int requestNum = selfTokenLimitList.get(apiKey).incrementAndGet();
+                    if(requestNum > one_selfCopilot_limit){
+                        return new ResponseEntity<>(Result.error("current requests is "+ requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                    }
                 }
                 String chat_token = selfTokenList.get(apiKey);
                 Map<String, String> headersMap = new HashMap<>();
                 //添加头部
                 addHeader(headersMap, chat_token);
                 String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
-                MediaType JSON = MediaType.get("application/json; charset=utf-8");
                 RequestBody requestBody = RequestBody.create(json, JSON);
                 Request.Builder requestBuilder = new Request.Builder().url(github_embaddings).post(requestBody);
                 headersMap.forEach(requestBuilder::addHeader);
@@ -968,9 +1093,7 @@ public class ChatController {
             Map<String, String> headersMap = new HashMap<>();
             //添加头部
             addHeader(headersMap, token);
-            String json = JSON.toJSONString(conversation);
-            // 创建一个 RequestBody 对象
-            MediaType JSON = MediaType.get("application/json; charset=utf-8");
+            String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
             RequestBody requestBody = RequestBody.create(json, JSON);
             Request.Builder requestBuilder = new Request.Builder().url(github_embaddings).post(requestBody);
             headersMap.forEach(requestBuilder::addHeader);

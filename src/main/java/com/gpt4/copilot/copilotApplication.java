@@ -209,11 +209,15 @@ public class copilotApplication {
         System.out.println("vscode_version：" + ChatController.getVscode_version());
         System.out.println("copilot_chat_version：" + ChatController.getCopilot_chat_version());
         System.out.println("get_token_url：" + ChatController.getGet_token_url());
+        System.out.println("one_copilot_limit：" + ChatController.getOne_copilot_limit());
+        System.out.println("one_coCopilot_limit：" + ChatController.getOne_coCopilot_limit());
+        System.out.println("one_selfCopilot_limit：" + ChatController.getOne_selfCopilot_limit());
         System.out.println("gpt4-copilot-java 初始化接口成功！");
         System.out.println("======================================================");
-        System.out.println("******原神gpt4-copilot-java-native v0.0.6启动成功******");
+        System.out.println("******原神gpt4-copilot-java-native v0.0.7启动成功******");
         System.out.println("* 采用graalvm打包，运行内存大幅度减小");
         System.out.println("* 适配官方requestBody,减小被查询异常");
+        System.out.println("* 使用ConcurrentHashMap，粗略的对于每个密钥按每分钟进行限速");
         System.out.println("URL地址：http://0.0.0.0:" + config.getServerPort() + config.getPrefix() + "");
         System.out.println("======================================================");
     }

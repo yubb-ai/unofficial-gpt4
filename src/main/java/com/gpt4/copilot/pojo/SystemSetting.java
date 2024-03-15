@@ -56,4 +56,19 @@ public class SystemSetting {
      */
     private Integer maxPoolSize;
 
+    /**
+     * one copilot_token max requests per minute
+     */
+    private Integer one_copilot_limit;
+
+    /**
+     * one coCopilot_token max requests per minute
+     */
+    private Integer one_coCopilot_limit;
+
+    /**
+     * one selfCopilot_token max requests per minute
+     */
+    private Integer one_selfCopilot_limit;
+
 }
