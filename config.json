@@ -4,11 +4,11 @@
   "get_token_url": "",
   "copilot_chat_version": "0.14.2024031401",
   "prefix": "",
-  "one_selfCopilot_limit": 2,
-  "one_copilot_limit": 2,
+  "one_selfCopilot_limit": 30,
+  "one_copilot_limit": 30,
   "vscode_version": "vscode\/1.85.2",
   "serverPort": 8080,
   "maxPoolSize": 300,
   "gpt4_sleepTime": 100,
-  "one_coCopilot_limit": 2
+  "one_coCopilot_limit": 30
 }
