@@ -370,7 +370,7 @@ public class ChatController {
             try {
                 jsonObject.getString("one_copilot_limit");
             } catch (JSONException e) {
-                jsonObject.put("get_token_url", 30);
+                jsonObject.put("one_copilot_limit", 30);
                 log.info("config.json没有新增one_copilot_limit参数,现已增加！");
                 exist = false;
             }
