@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.gpt4.copilot</groupId>
     <artifactId>gpt-4-copilot</artifactId>
-    <version>0.0.7</version>
+    <version>0.1.0</version>
     <name>native</name>
     <description>Demo project for Spring Boot with GraalVM Native Image</description>
     <properties>
@@ -33,16 +33,6 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.rednoise</groupId>
-            <artifactId>rita</artifactId>
-            <version>2.4.501</version>
-        </dependency>
-        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
@@ -58,16 +48,6 @@
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
         </dependency>
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.6</version>
-        </dependency>
-        <dependency>
-            <groupId>com.vaadin.external.google</groupId>
-            <artifactId>android-json</artifactId>
-            <version>0.0.20131108.vaadin1</version>
-        </dependency>
     </dependencies>
 
     <build>
@@ -82,7 +62,7 @@
                 <configuration>
                     <excludes>
                         <exclude>
-                            <groupId>org.projectlombok</groupId>
+                            <groupId>org.project-lombok</groupId>
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>

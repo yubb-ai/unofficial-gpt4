@@ -1,8 +1,11 @@
 package com.gpt4.copilot.controller;
 
+import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.alibaba.fastjson2.JSONException;
+import com.alibaba.fastjson2.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gpt4.copilot.copilotApplication;
+import com.gpt4.copilot.CopilotApplication;
 import com.gpt4.copilot.pojo.Conversation;
 import com.gpt4.copilot.pojo.Result;
 import com.gpt4.copilot.pojo.SystemSetting;
@@ -11,9 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
-import org.apache.commons.lang.StringUtils;
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -44,18 +45,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Data
 @RestController()
 public class ChatController {
+    public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
     /**
      * 缓存cocopilotToken
      */
-    private static final HashMap<String, String> copilotTokenList;
+    private static final ConcurrentHashMap<String, String> copilotTokenList;
     /**
      * 缓存copilotToken
      */
-    private static final HashMap<String, String> coCopilotTokenList;
+    private static final ConcurrentHashMap<String, String> coCopilotTokenList;
     /**
      * 缓存selfToken
      */
-    private static final HashMap<String, String> selfTokenList;
+    private static final ConcurrentHashMap<String, String> selfTokenList;
     /**
      * 缓存cocopilotToken_limit
      */
@@ -124,6 +126,62 @@ public class ChatController {
      * one copilot_token max requests per minute
      */
     private static Integer one_copilot_limit;
+    /**
+     * one coCopilot_token max requests per minute
+     */
+    private static Integer one_coCopilot_limit;
+    /**
+     * one selfCopilot_token max requests per minute
+     */
+    private static Integer one_selfCopilot_limit;
+    /**
+     * 定义okhttp库
+     */
+    private static OkHttpClient client = new OkHttpClient.Builder().connectTimeout(3, TimeUnit.MINUTES)
+            .readTimeout(6, TimeUnit.MINUTES)
+            .writeTimeout(6, TimeUnit.MINUTES)
+            .build();
+    /**
+     * 定义线程池里的线程名字
+     */
+    private static ThreadFactory threadFactory = new ThreadFactory() {
+        private final AtomicInteger counter = new AtomicInteger(0);
+
+        @Override
+        public Thread newThread(Runnable r) {
+            return new Thread(r, "chatThreadPool-" + counter.getAndIncrement());
+        }
+    };
+    /**
+     * 定义线程池
+     */
+    private static ExecutorService executor;
+
+    /**
+     * 初始化ChatController类
+     */
+    static {
+        selfTokenList = new ConcurrentHashMap<>();
+        copilotTokenList = new ConcurrentHashMap<>();
+        coCopilotTokenList = new ConcurrentHashMap<>();
+        selfTokenLimitList = new ConcurrentHashMap<>();
+        copilotTokenLimitList = new ConcurrentHashMap<>();
+        coCopilotTokenLimitList = new ConcurrentHashMap<>();
+        machineId = generateMachineId();
+        SystemSetting systemSetting = selectSetting();
+        setGpt4_sleepTime(systemSetting.getGpt4_sleepTime());
+        setGpt3_sleepTime(systemSetting.getGpt3_sleepTime());
+        setPassword(systemSetting.getPassword());
+        setGet_token_url(systemSetting.getGet_token_url());
+        setVscode_version(systemSetting.getVscode_version());
+        setCopilot_chat_version(systemSetting.getCopilot_chat_version());
+        setMaxPoolSize(systemSetting.getMaxPoolSize());
+        setExecutor(systemSetting.getMaxPoolSize());
+        setOne_copilot_limit(systemSetting.getOne_copilot_limit());
+        setOne_coCopilot_limit(systemSetting.getOne_coCopilot_limit());
+        setOne_selfCopilot_limit(systemSetting.getOne_selfCopilot_limit());
+
+    }
 
     public static Integer getOne_copilot_limit() {
         return one_copilot_limit;
@@ -147,66 +205,6 @@ public class ChatController {
 
     public static void setOne_selfCopilot_limit(Integer one_selfCopilot_limit) {
         ChatController.one_selfCopilot_limit = one_selfCopilot_limit;
-    }
-
-    /**
-     * one coCopilot_token max requests per minute
-     */
-    private static Integer one_coCopilot_limit;
-
-    /**
-     * one selfCopilot_token max requests per minute
-     */
-    private static Integer one_selfCopilot_limit;
-
-    /**
-     * 定义okhttp库
-     */
-    private static OkHttpClient client = new OkHttpClient.Builder().connectTimeout(3, TimeUnit.MINUTES)
-            .readTimeout(5, TimeUnit.MINUTES)
-            .writeTimeout(5, TimeUnit.MINUTES)
-            .build();
-    /**
-     * 定义线程池里的线程名字
-     */
-    private static ThreadFactory threadFactory = new ThreadFactory() {
-        private final AtomicInteger counter = new AtomicInteger(0);
-
-        @Override
-        public Thread newThread(Runnable r) {
-            return new Thread(r, "chatThreadPool-" + counter.getAndIncrement());
-        }
-    };
-    /**
-     * 定义线程池
-     */
-    private static ExecutorService executor;
-
-
-    /**
-     * 初始化ChatController类
-     */
-    static {
-        selfTokenList = new HashMap<>();
-        copilotTokenList = new HashMap<>();
-        coCopilotTokenList = new HashMap<>();
-        selfTokenLimitList = new ConcurrentHashMap<>();
-        copilotTokenLimitList = new ConcurrentHashMap<>();
-        coCopilotTokenLimitList = new ConcurrentHashMap<>();
-        machineId = generateMachineId();
-        SystemSetting systemSetting = selectSetting();
-        setGpt4_sleepTime(systemSetting.getGpt4_sleepTime());
-        setGpt3_sleepTime(systemSetting.getGpt3_sleepTime());
-        setPassword(systemSetting.getPassword());
-        setGet_token_url(systemSetting.getGet_token_url());
-        setVscode_version(systemSetting.getVscode_version());
-        setCopilot_chat_version(systemSetting.getCopilot_chat_version());
-        setMaxPoolSize(systemSetting.getMaxPoolSize());
-        setExecutor(systemSetting.getMaxPoolSize());
-        setOne_copilot_limit(systemSetting.getOne_copilot_limit());
-        setOne_coCopilot_limit(systemSetting.getOne_coCopilot_limit());
-        setOne_selfCopilot_limit(systemSetting.getOne_selfCopilot_limit());
-
     }
 
     public static String getCopilot_chat_version() {
@@ -269,8 +267,6 @@ public class ChatController {
         ChatController.get_token_url = get_token_url;
     }
 
-    public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
-
     /**
      * 初始化获取环境变量
      */
@@ -307,10 +303,10 @@ public class ChatController {
             // 读取 JSON 文件内容
             String jsonContent = new String(Files.readAllBytes(Paths.get(parent)));
             // 将 JSON 字符串解析为 JSONObject
-            JSONObject jsonObject = new JSONObject(jsonContent);
+            JSONObject jsonObject = com.alibaba.fastjson2.JSON.parseObject(jsonContent);
             try {
                 jsonObject.getString("password");
-            } catch (JSONException e) {
+            } catch ( JSONException e) {
                 jsonObject.put("password", UUID.randomUUID().toString());
                 log.info("config.json没有新增password参数,现已增加！");
                 exist = false;
@@ -323,14 +319,14 @@ public class ChatController {
                 exist = false;
             }
             try {
-                jsonObject.getInt("gpt4_sleepTime");
+                jsonObject.getInteger("gpt4_sleepTime");
             } catch (JSONException e) {
                 jsonObject.put("gpt4_sleepTime", "100");
                 log.info("config.json没有新增gpt4_sleepTime参数,现已增加！");
                 exist = false;
             }
             try {
-                jsonObject.getInt("maxPoolSize");
+                jsonObject.getInteger("maxPoolSize");
             } catch (JSONException e) {
                 jsonObject.put("maxPoolSize", 300);
                 log.info("config.json没有新增maxPoolSize参数,现已增加！");
@@ -340,7 +336,7 @@ public class ChatController {
             try {
                 jsonObject.getString("vscode_version");
             } catch (JSONException e) {
-                String latestVSCodeVersion = copilotApplication.getLatestVSCodeVersion();
+                String latestVSCodeVersion = CopilotApplication.getLatestVSCodeVersion();
                 if (latestVSCodeVersion != null) {
                     jsonObject.put("vscode_version", latestVSCodeVersion);
                     log.info("config.json没有新增vscode_version参数,现已增加！");
@@ -351,7 +347,7 @@ public class ChatController {
             try {
                 jsonObject.getString("copilot_chat_version");
             } catch (JSONException e) {
-                String latestChatVersion = copilotApplication.getLatestExtensionVersion("GitHub", "copilot-chat");
+                String latestChatVersion = CopilotApplication.getLatestExtensionVersion("GitHub", "copilot-chat");
                 if (latestChatVersion != null) {
                     jsonObject.put("copilot_chat_version", latestChatVersion);
                     log.info("config.json没有新增copilot_chat_version参数,现已增加！");
@@ -392,20 +388,20 @@ public class ChatController {
             }
             // 将 JSONObject 转换为 Config 类的实例
             SystemSetting config = new SystemSetting();
-            config.setPassword(jsonObject.optString("password"));
-            config.setMaxPoolSize(jsonObject.optInt("maxPoolSize"));
-            config.setGpt3_sleepTime(jsonObject.optInt("gpt3_sleepTime"));
-            config.setGpt4_sleepTime(jsonObject.optInt("gpt4_sleepTime"));
-            config.setVscode_version(jsonObject.optString("vscode_version"));
-            config.setCopilot_chat_version(jsonObject.optString("copilot_chat_version"));
-            config.setGet_token_url(jsonObject.optString("get_token_url"));
-            config.setOne_copilot_limit(jsonObject.optInt("one_copilot_limit"));
-            config.setOne_coCopilot_limit(jsonObject.optInt("one_coCopilot_limit"));
-            config.setOne_selfCopilot_limit(jsonObject.optInt("one_selfCopilot_limit"));
+            config.setPassword(jsonObject.getString("password"));
+            config.setMaxPoolSize(jsonObject.getIntValue("maxPoolSize"));
+            config.setGpt3_sleepTime(jsonObject.getIntValue("gpt3_sleepTime"));
+            config.setGpt4_sleepTime(jsonObject.getIntValue("gpt4_sleepTime"));
+            config.setVscode_version(jsonObject.getString("vscode_version"));
+            config.setCopilot_chat_version(jsonObject.getString("copilot_chat_version"));
+            config.setGet_token_url(jsonObject.getString("get_token_url"));
+            config.setOne_copilot_limit(jsonObject.getIntValue("one_copilot_limit"));
+            config.setOne_coCopilot_limit(jsonObject.getIntValue("one_coCopilot_limit"));
+            config.setOne_selfCopilot_limit(jsonObject.getIntValue("one_selfCopilot_limit"));
 
-            if (exist == false) {
+            if (!exist) {
                 // 将修改后的 JSONObject 转换为格式化的 JSON 字符串
-                String updatedJson = jsonObject.toString(2);
+                String updatedJson = com.alibaba.fastjson.JSON.toJSONString(jsonObject, SerializerFeature.PrettyFormat);
                 Files.write(Paths.get(parent), updatedJson.getBytes());
             }
             return config;
@@ -413,15 +409,6 @@ public class ChatController {
             e.printStackTrace();
         }
         return null;
-    }
-
-    @Scheduled(cron = "0 */1 * * * ?")
-    public void resetLimit() {
-        ExecutorService updateExecutor = Executors.newFixedThreadPool(3);
-        updateExecutor.submit(() -> copilotTokenLimitList.replaceAll((k, v) -> new AtomicInteger(0)));
-        updateExecutor.submit(() -> coCopilotTokenLimitList.replaceAll((k, v) -> new AtomicInteger(0)));
-        updateExecutor.submit(() -> selfTokenLimitList.replaceAll((k, v) -> new AtomicInteger(0)));
-        updateExecutor.shutdown();
     }
 
     private static String generateMachineId() {
@@ -443,6 +430,15 @@ public class ChatController {
         }
     }
 
+    @Scheduled(cron = "0 */1 * * * ?")
+    public void resetLimit() {
+        ExecutorService updateExecutor = Executors.newFixedThreadPool(3);
+        updateExecutor.submit(() -> copilotTokenLimitList.replaceAll((k, v) -> new AtomicInteger(0)));
+        updateExecutor.submit(() -> coCopilotTokenLimitList.replaceAll((k, v) -> new AtomicInteger(0)));
+        updateExecutor.submit(() -> selfTokenLimitList.replaceAll((k, v) -> new AtomicInteger(0)));
+        updateExecutor.shutdown();
+    }
+
     /**
      * 修改sleep时间
      */
@@ -456,7 +452,7 @@ public class ChatController {
                 String parent = selectFile();
                 // 读取 JSON 文件内容
                 String jsonContent = new String(Files.readAllBytes(Paths.get(parent)));
-                JSONObject jsonObject = new JSONObject(jsonContent);
+                JSONObject jsonObject = com.alibaba.fastjson2.JSON.parseObject(jsonContent);
                 if (gpt3_sleepTime != null && gpt4_sleepTime >= 0 && gpt4_sleepTime <= 150) {
                     setGpt3_sleepTime(gpt3_sleepTime);
                     jsonObject.put("gpt3_sleepTime", gpt3_sleepTime);
@@ -470,7 +466,7 @@ public class ChatController {
                     jsonObject.put("get_token_url", get_token_url);
                 }
                 // 将修改后的 JSONObject 转换为格式化的 JSON 字符串
-                String updatedJson = jsonObject.toString(2);
+                String updatedJson = com.alibaba.fastjson.JSON.toJSONString(jsonObject, SerializerFeature.PrettyFormat);
                 Path path = Paths.get(parent);
                 Files.write(path, updatedJson.getBytes());
                 return Result.success("修改成功！");
@@ -495,7 +491,8 @@ public class ChatController {
      */
     @PostMapping(value = "/copilot_internal/v2/token")
     public ResponseEntity<Object> getV2Token(HttpServletResponse response, HttpServletRequest request) {
-        String authorizationHeader = StringUtils.trimToNull(request.getHeader("Authorization"));
+        String header = request.getHeader("Authorization");
+        String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
                 String apiKey;
@@ -562,7 +559,8 @@ public class ChatController {
     public ResponseEntity<Object> coPilotConversation(HttpServletResponse response,
                                                       HttpServletRequest request,
                                                       @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
-        String authorizationHeader = StringUtils.trimToNull(request.getHeader("Authorization"));
+        String header = request.getHeader("Authorization");
+        String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
@@ -583,11 +581,10 @@ public class ChatController {
                     copilotTokenLimitList.putIfAbsent(apiKey, new AtomicInteger(1));
                     copilotTokenList.put(apiKey, token);
                     log.info("Github CopilotToken初始化成功！");
-                }
-                else {
+                } else {
                     int requestNum = copilotTokenLimitList.get(apiKey).incrementAndGet();
-                    if(requestNum > one_copilot_limit){
-                        return new ResponseEntity<>(Result.error("current requests is "+ requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                    if (requestNum > one_copilot_limit) {
+                        return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
@@ -624,18 +621,7 @@ public class ChatController {
             return null;
         }, executor);
 
-        ResponseEntity<Object> responseEntity;
-
-        try {
-            responseEntity = future.get(6, TimeUnit.MINUTES);
-        } catch (TimeoutException ex) {
-            future.cancel(true);
-            responseEntity = new ResponseEntity<>(Result.error("The task timed out"), HttpStatus.REQUEST_TIMEOUT);
-        } catch (Exception ex) {
-            log.error(ex.getMessage());
-            responseEntity = new ResponseEntity<>(Result.error("An error occurred"), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        return responseEntity;
+        return getObjectResponseEntity(response, future);
     }
 
 
@@ -656,7 +642,8 @@ public class ChatController {
     public ResponseEntity<Object> coCoPilotConversation(HttpServletResponse response,
                                                         HttpServletRequest request,
                                                         @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
-        String authorizationHeader = StringUtils.trimToNull(request.getHeader("Authorization"));
+        String header = request.getHeader("Authorization");
+        String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
@@ -677,11 +664,10 @@ public class ChatController {
                     coCopilotTokenLimitList.put(apiKey, new AtomicInteger(1));
                     coCopilotTokenList.put(apiKey, token);
                     log.info("coCopilotToken初始化成功！");
-                }
-                else {
+                } else {
                     int requestNum = coCopilotTokenLimitList.get(apiKey).incrementAndGet();
-                    if(requestNum > one_coCopilot_limit){
-                        return new ResponseEntity<>(Result.error("current requests is "+ requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                    if (requestNum > one_coCopilot_limit) {
+                        return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
@@ -718,14 +704,32 @@ public class ChatController {
             return null;
         }, executor);
 
-        return getObjectResponseEntity(future);
+        return getObjectResponseEntity(response, future);
+    }
+
+    private ResponseEntity<Object> getObjectResponseEntity(HttpServletResponse response, CompletableFuture<ResponseEntity<Object>> future) {
+        ResponseEntity<Object> responseEntity;
+
+        try {
+            responseEntity = future.get(6, TimeUnit.MINUTES);
+        } catch (TimeoutException ex) {
+            response.setContentType("application/json; charset=utf-8");
+            future.cancel(true);
+            responseEntity = new ResponseEntity<>(Result.error("The Chat timed out"), HttpStatus.REQUEST_TIMEOUT);
+        } catch (Exception ex) {
+            response.setContentType("application/json; charset=utf-8");
+            log.error(ex.getMessage());
+            responseEntity = new ResponseEntity<>(Result.error("An error occurred"), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return responseEntity;
     }
 
     @PostMapping(value = "/self/v1/chat/completions")
     public ResponseEntity<Object> selfConversation(HttpServletResponse response,
                                                    HttpServletRequest request,
                                                    @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
-        String authorizationHeader = StringUtils.trimToNull(request.getHeader("Authorization"));
+        String header = request.getHeader("Authorization");
+        String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
@@ -744,13 +748,12 @@ public class ChatController {
                         return new ResponseEntity<>(Result.error("自定义self APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                     }
                     selfTokenList.put(apiKey, token);
-                    selfTokenLimitList.put(apiKey,new AtomicInteger(1));
+                    selfTokenLimitList.put(apiKey, new AtomicInteger(1));
                     log.info("自定义selfToken初始化成功！");
-                }
-                else {
+                } else {
                     int requestNum = selfTokenLimitList.get(apiKey).incrementAndGet();
-                    if(requestNum > one_selfCopilot_limit){
-                        return new ResponseEntity<>(Result.error("current requests is "+ requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                    if (requestNum > one_selfCopilot_limit) {
+                        return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
@@ -787,7 +790,7 @@ public class ChatController {
             return null;
         }, executor);
 
-        return getObjectResponseEntity(future);
+        return getObjectResponseEntity(response, future);
     }
 
 
@@ -843,7 +846,8 @@ public class ChatController {
     public ResponseEntity<Object> coPilotEmbeddings(HttpServletResponse response,
                                                     HttpServletRequest request,
                                                     @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
-        String authorizationHeader = StringUtils.trimToNull(request.getHeader("Authorization"));
+        String header = request.getHeader("Authorization");
+        String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
@@ -864,11 +868,10 @@ public class ChatController {
                     copilotTokenLimitList.put(apiKey, new AtomicInteger(1));
                     copilotTokenList.put(apiKey, token);
                     log.info("Github CopilotToken初始化成功！");
-                }
-                else {
+                } else {
                     int requestNum = copilotTokenLimitList.get(apiKey).incrementAndGet();
-                    if(requestNum > one_copilot_limit){
-                        return new ResponseEntity<>(Result.error("current requests is "+ requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                    if (requestNum > one_copilot_limit) {
+                        return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
@@ -941,7 +944,8 @@ public class ChatController {
     public ResponseEntity<Object> coCoPilotEmbeddings(HttpServletResponse response,
                                                       HttpServletRequest request,
                                                       @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
-        String authorizationHeader = StringUtils.trimToNull(request.getHeader("Authorization"));
+        String header = request.getHeader("Authorization");
+        String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
@@ -962,11 +966,10 @@ public class ChatController {
                     coCopilotTokenLimitList.put(apiKey, new AtomicInteger(1));
                     coCopilotTokenList.put(apiKey, token);
                     log.info("coCopilotToken初始化成功！");
-                }
-                else {
+                } else {
                     int requestNum = coCopilotTokenLimitList.get(apiKey).incrementAndGet();
-                    if(requestNum > one_coCopilot_limit){
-                        return new ResponseEntity<>(Result.error("current requests is "+ requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                    if (requestNum > one_coCopilot_limit) {
+                        return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
@@ -1024,7 +1027,8 @@ public class ChatController {
     public ResponseEntity<Object> selfEmbeddings(HttpServletResponse response,
                                                  HttpServletRequest request,
                                                  @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
-        String authorizationHeader = StringUtils.trimToNull(request.getHeader("Authorization"));
+        String header = request.getHeader("Authorization");
+        String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
@@ -1042,14 +1046,13 @@ public class ChatController {
                     if (token == null) {
                         return new ResponseEntity<>(Result.error("自定义APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                     }
-                    selfTokenLimitList.put(apiKey,new AtomicInteger(1));
+                    selfTokenLimitList.put(apiKey, new AtomicInteger(1));
                     selfTokenList.put(apiKey, token);
                     log.info("自定义selfToken初始化成功！");
-                }
-                else {
+                } else {
                     int requestNum = selfTokenLimitList.get(apiKey).incrementAndGet();
-                    if(requestNum > one_selfCopilot_limit){
-                        return new ResponseEntity<>(Result.error("current requests is "+ requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                    if (requestNum > one_selfCopilot_limit) {
+                        return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
                 String chat_token = selfTokenList.get(apiKey);
@@ -1127,14 +1130,19 @@ public class ChatController {
                 .addHeader("Editor-Plugin-Version", "copilot-chat/" + copilot_chat_version)
                 .addHeader("User-Agent", "GitHubCopilotChat/" + copilot_chat_version)
                 .addHeader("Accept", "*/*").build();
+        return getToken(request);
+    }
+
+    @Nullable
+    private String getToken(Request request) throws IOException {
         try (Response response = client.newCall(request).execute()) {
             log.info(response.toString());
             if (!response.isSuccessful()) {
                 return null;
             }
             String responseBody = response.body().string();
-            JSONObject jsonResponse = new JSONObject(responseBody);
-            return jsonResponse.has("token") ? jsonResponse.get("token").toString() : null;
+            JSONObject jsonResponse = com.alibaba.fastjson2.JSON.parseObject(responseBody);
+            return jsonResponse.getString("token");
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
@@ -1154,17 +1162,7 @@ public class ChatController {
                 .addHeader("Editor-Plugin-Version", "copilot-chat/" + copilot_chat_version)
                 .addHeader("User-Agent", "GitHubCopilotChat/" + copilot_chat_version)
                 .addHeader("Accept", "*/*").build();
-        try (Response response = client.newCall(request).execute()) {
-            log.info(response.toString());
-            if (!response.isSuccessful()) {
-                return null;
-            }
-            String responseBody = response.body().string();
-            JSONObject jsonResponse = new JSONObject(responseBody);
-            return jsonResponse.has("token") ? jsonResponse.get("token").toString() : null;
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
+        return getToken(request);
     }
 
     /**
@@ -1181,17 +1179,7 @@ public class ChatController {
                 .addHeader("Editor-Plugin-Version", "copilot-chat/" + copilot_chat_version)
                 .addHeader("User-Agent", "GitHubCopilotChat/" + copilot_chat_version)
                 .addHeader("Accept", "*/*").build();
-        try (Response response = client.newCall(request).execute()) {
-            log.info(response.toString());
-            if (!response.isSuccessful()) {
-                return null;
-            }
-            String responseBody = response.body().string();
-            JSONObject jsonResponse = new JSONObject(responseBody);
-            return jsonResponse.has("token") ? jsonResponse.get("token").toString() : null;
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
+        return getToken(request);
     }
 
 

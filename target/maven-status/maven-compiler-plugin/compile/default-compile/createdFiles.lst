@@ -7,4 +7,4 @@ com\gpt4\copilot\pojo\Conversation.class
 com\gpt4\copilot\pojo\SystemSetting.class
 com\gpt4\copilot\config\CorsConfig.class
 com\gpt4\copilot\pojo\Result.class
-com\gpt4\copilot\copilotApplication.class
+com\gpt4\copilot\CopilotApplication.class
