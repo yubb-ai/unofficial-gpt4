@@ -5,7 +5,7 @@ import com.alibaba.fastjson2.JSONException;
 import com.alibaba.fastjson2.JSONObject;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gpt4.copilot.CopilotApplication;
+import com.gpt4.copilot.copilotApplication;
 import com.gpt4.copilot.pojo.Conversation;
 import com.gpt4.copilot.pojo.Result;
 import com.gpt4.copilot.pojo.SystemSetting;
@@ -336,7 +336,7 @@ public class ChatController {
             try {
                 jsonObject.getString("vscode_version");
             } catch (JSONException e) {
-                String latestVSCodeVersion = CopilotApplication.getLatestVSCodeVersion();
+                String latestVSCodeVersion = copilotApplication.getLatestVSCodeVersion();
                 if (latestVSCodeVersion != null) {
                     jsonObject.put("vscode_version", latestVSCodeVersion);
                     log.info("config.json没有新增vscode_version参数,现已增加！");
@@ -347,7 +347,7 @@ public class ChatController {
             try {
                 jsonObject.getString("copilot_chat_version");
             } catch (JSONException e) {
-                String latestChatVersion = CopilotApplication.getLatestExtensionVersion("GitHub", "copilot-chat");
+                String latestChatVersion = copilotApplication.getLatestExtensionVersion("GitHub", "copilot-chat");
                 if (latestChatVersion != null) {
                     jsonObject.put("copilot_chat_version", latestChatVersion);
                     log.info("config.json没有新增copilot_chat_version参数,现已增加！");

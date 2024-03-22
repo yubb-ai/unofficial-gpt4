@@ -31,7 +31,7 @@ import java.nio.file.Paths;
 @Slf4j
 @EnableScheduling
 @SpringBootApplication
-public class CopilotApplication {
+public class copilotApplication {
     private static final String VS_CODE_API_URL = "https://api.github.com/repos/microsoft/vscode/releases/latest";
     private static final String VS_CODE_CHAT_URL = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";
 
@@ -39,7 +39,7 @@ public class CopilotApplication {
         String configFilePath = System.getProperty("user.dir") + File.separator + "config.json";
         SystemSetting config = loadConfig(configFilePath);
         setSystemProperties(config);
-        SpringApplication.run(CopilotApplication.class, args);
+        SpringApplication.run(copilotApplication.class, args);
         printStartupMessage(config);
     }
 
