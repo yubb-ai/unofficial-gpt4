@@ -35,7 +35,7 @@ public class CopilotApplication {
     private static final String VS_CODE_API_URL = "https://api.github.com/repos/microsoft/vscode/releases/latest";
     private static final String VS_CODE_CHAT_URL = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args){
         String configFilePath = System.getProperty("user.dir") + File.separator + "config.json";
         SystemSetting config = loadConfig(configFilePath);
         setSystemProperties(config);
