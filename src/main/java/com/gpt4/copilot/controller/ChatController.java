@@ -584,6 +584,7 @@ public class ChatController {
                 } else {
                     int requestNum = copilotTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > one_copilot_limit) {
+                        log.info(apiKey + " requests is " + requestNum + " rate limit exceeded");
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
@@ -667,6 +668,7 @@ public class ChatController {
                 } else {
                     int requestNum = coCopilotTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > one_coCopilot_limit) {
+                        log.info(apiKey + " requests is " + requestNum + " rate limit exceeded");
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
@@ -753,6 +755,7 @@ public class ChatController {
                 } else {
                     int requestNum = selfTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > one_selfCopilot_limit) {
+                        log.info(apiKey + " requests is " + requestNum + " rate limit exceeded");
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
@@ -871,6 +874,7 @@ public class ChatController {
                 } else {
                     int requestNum = copilotTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > one_copilot_limit) {
+                        log.info(apiKey + " requests is " + requestNum + " rate limit exceeded");
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
@@ -969,6 +973,7 @@ public class ChatController {
                 } else {
                     int requestNum = coCopilotTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > one_coCopilot_limit) {
+                        log.info(apiKey + " requests is " + requestNum + " rate limit exceeded");
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
@@ -1052,6 +1057,7 @@ public class ChatController {
                 } else {
                     int requestNum = selfTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > one_selfCopilot_limit) {
+                        log.info(apiKey + " requests is " + requestNum + " rate limit exceeded");
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
