@@ -657,6 +657,12 @@ public class ChatController {
         return getObjectResponseEntity(response, future);
     }
 
+    /**
+     * 返回异步responseEntity
+     * 
+     * @param response
+     * future
+     */
     private ResponseEntity<Object> getObjectResponseEntity(HttpServletResponse response, CompletableFuture<ResponseEntity<Object>> future) {
         ResponseEntity<Object> responseEntity;
 
@@ -674,6 +680,12 @@ public class ChatController {
         return responseEntity;
     }
 
+    /**
+     * 获取url和apiKey
+     * @param authorizationHeader
+     * @param conversation
+     * @throws IOException
+     */
     private String[] extractApiKeyAndRequestUrl(String authorizationHeader, Conversation conversation) throws IllegalArgumentException {
         if (conversation == null) {
             throw new IllegalArgumentException("Request body is missing or not in JSON format");
