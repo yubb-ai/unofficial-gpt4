@@ -1,14 +1,14 @@
 {
-	"gpt3_sleepTime":0,
+	"prefix":"/",
 	"password":"",
-	"get_token_url":"",
+	"gpt3_sleepTime":0,
+	"gpt4_sleepTime":100,
 	"copilot_chat_version":"0.14.2024031401",
-	"prefix":"",
-	"one_selfCopilot_limit":30,
-	"one_copilot_limit":30,
 	"vscode_version":"vscode/1.85.2",
+	"get_token_url":"https://api.cocopilot.org/copilot_internal/v2/token",
 	"serverPort":8080,
 	"maxPoolSize":300,
-	"gpt4_sleepTime":100,
-	"one_coCopilot_limit":30
+	"one_copilot_limit":30,
+	"one_coCopilot_limit":30,
+	"one_selfCopilot_limit":30
 }

@@ -32,6 +32,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -94,6 +95,7 @@ public class ChatController {
      * github Embedding Url
      */
     private final static String github_embaddings = "https://api.githubcopilot.com/embeddings";
+    private static final String BEARER = "Bearer ";
     /**
      * gpt4单字符睡眠时间
      */
@@ -291,119 +293,67 @@ public class ChatController {
         return parent;
     }
 
+    private static <T> T getValueOrDefault(JSONObject jsonObject, String key, T defaultValue, String logMessage) {
+        T value;
+        try {
+            value = (T) jsonObject.get(key);
+        } catch (JSONException e) {
+            value = null;
+        }
+        if (value == null) {
+            jsonObject.put(key, defaultValue);
+            log.info(logMessage);
+            value = defaultValue;
+        }
+        return value;
+    }
+
     /**
      * 查询config.json里的系统值
      *
      * @return systemSettings类
      */
     public static SystemSetting selectSetting() {
-        boolean exist = true;
         String parent = selectFile();
         try {
             // 读取 JSON 文件内容
             String jsonContent = new String(Files.readAllBytes(Paths.get(parent)));
             // 将 JSON 字符串解析为 JSONObject
             JSONObject jsonObject = com.alibaba.fastjson2.JSON.parseObject(jsonContent);
-            try {
-                jsonObject.getString("password");
-            } catch ( JSONException e) {
-                jsonObject.put("password", UUID.randomUUID().toString());
-                log.info("config.json没有新增password参数,现已增加！");
-                exist = false;
-            }
-            try {
-                jsonObject.getString("gpt3_sleepTime");
-            } catch (JSONException e) {
-                jsonObject.put("gpt3_sleepTime", "0");
-                log.info("config.json没有新增gpt3_sleepTime参数,现已增加！");
-                exist = false;
-            }
-            try {
-                jsonObject.getInteger("gpt4_sleepTime");
-            } catch (JSONException e) {
-                jsonObject.put("gpt4_sleepTime", "100");
-                log.info("config.json没有新增gpt4_sleepTime参数,现已增加！");
-                exist = false;
-            }
-            try {
-                jsonObject.getInteger("maxPoolSize");
-            } catch (JSONException e) {
-                jsonObject.put("maxPoolSize", 300);
-                log.info("config.json没有新增maxPoolSize参数,现已增加！");
-                exist = false;
-            }
 
-            try {
-                jsonObject.getString("vscode_version");
-            } catch (JSONException e) {
-                String latestVSCodeVersion = copilotApplication.getLatestVSCodeVersion();
-                if (latestVSCodeVersion != null) {
-                    jsonObject.put("vscode_version", latestVSCodeVersion);
-                    log.info("config.json没有新增vscode_version参数,现已增加！");
-                }
-                exist = false;
+            String password = getValueOrDefault(jsonObject, "password", UUID.randomUUID().toString(), "config.json没有新增password参数,现已增加！");
+            if(password.length() == 0) {
+                password = UUID.randomUUID().toString();
+                jsonObject.put("password", password);
+                log.info("config.json password未设置，现已自动帮您设置！");
             }
+            Integer gpt3SleepTime = getValueOrDefault(jsonObject, "gpt3_sleepTime", 0, "config.json没有新增gpt3_sleepTime参数,现已增加！");
+            Integer gpt4SleepTime = getValueOrDefault(jsonObject, "gpt4_sleepTime", 100, "config.json没有新增gpt4_sleepTime参数,现已增加！");
+            Integer maxPoolSize = getValueOrDefault(jsonObject, "maxPoolSize", 300, "config.json没有新增maxPoolSize参数,现已增加！");
+            String vscodeVersion = getValueOrDefault(jsonObject, "vscode_version", copilotApplication.getLatestVSCodeVersion(), "config.json没有新增vscode_version参数,现已增加！");
+            String copilotChatVersion = getValueOrDefault(jsonObject, "copilot_chat_version", copilotApplication.getLatestExtensionVersion("GitHub", "copilot-chat"), "config.json没有新增copilot_chat_version参数,现已增加！");
+            String getTokenUrl = getValueOrDefault(jsonObject, "get_token_url", "https://api.cocopilot.org/copilot_internal/v2/token", "config.json没有新增get_token_url参数,现已增加！");
+            Integer oneCopilotLimit = getValueOrDefault(jsonObject, "one_copilot_limit", 30, "config.json没有新增one_copilot_limit参数,现已增加！");
+            Integer oneCoCopilotLimit = getValueOrDefault(jsonObject, "one_coCopilot_limit", 30, "config.json没有新增one_coCopilot_limit参数,现已增加！");
+            Integer oneSelfCopilotLimit = getValueOrDefault(jsonObject, "one_selfCopilot_limit", 30, "config.json没有新增one_selfCopilot_limit参数,现已增加！");
 
-            try {
-                jsonObject.getString("copilot_chat_version");
-            } catch (JSONException e) {
-                String latestChatVersion = copilotApplication.getLatestExtensionVersion("GitHub", "copilot-chat");
-                if (latestChatVersion != null) {
-                    jsonObject.put("copilot_chat_version", latestChatVersion);
-                    log.info("config.json没有新增copilot_chat_version参数,现已增加！");
-                }
-                exist = false;
-            }
+            // 将修改后的 JSONObject 转换为格式化的 JSON 字符串
+            String updatedJson = com.alibaba.fastjson.JSON.toJSONString(jsonObject, SerializerFeature.PrettyFormat);
+            Files.write(Paths.get(parent), updatedJson.getBytes());
 
-            try {
-                jsonObject.getString("get_token_url");
-            } catch (JSONException e) {
-                jsonObject.put("get_token_url", "https://api.cocopilot.org/copilot_internal/v2/token");
-                log.info("config.json没有新增get_token_url参数,现已增加！");
-                exist = false;
-            }
-
-            try {
-                jsonObject.getString("one_copilot_limit");
-            } catch (JSONException e) {
-                jsonObject.put("one_copilot_limit", 30);
-                log.info("config.json没有新增one_copilot_limit参数,现已增加！");
-                exist = false;
-            }
-
-            try {
-                jsonObject.getString("one_coCopilot_limit");
-            } catch (JSONException e) {
-                jsonObject.put("one_coCopilot_limit", 30);
-                log.info("config.json没有新增one_coCopilot_limit参数,现已增加！");
-                exist = false;
-            }
-
-            try {
-                jsonObject.getString("one_selfCopilot_limit");
-            } catch (JSONException e) {
-                jsonObject.put("one_selfCopilot_limit", 30);
-                log.info("config.json没有新增one_selfCopilot_limit参数,现已增加！");
-                exist = false;
-            }
-            // 将 JSONObject 转换为 Config 类的实例
+            // Convert JSONObject to Config class instance
             SystemSetting config = new SystemSetting();
-            config.setPassword(jsonObject.getString("password"));
-            config.setMaxPoolSize(jsonObject.getIntValue("maxPoolSize"));
-            config.setGpt3_sleepTime(jsonObject.getIntValue("gpt3_sleepTime"));
-            config.setGpt4_sleepTime(jsonObject.getIntValue("gpt4_sleepTime"));
-            config.setVscode_version(jsonObject.getString("vscode_version"));
-            config.setCopilot_chat_version(jsonObject.getString("copilot_chat_version"));
-            config.setGet_token_url(jsonObject.getString("get_token_url"));
-            config.setOne_copilot_limit(jsonObject.getIntValue("one_copilot_limit"));
-            config.setOne_coCopilot_limit(jsonObject.getIntValue("one_coCopilot_limit"));
-            config.setOne_selfCopilot_limit(jsonObject.getIntValue("one_selfCopilot_limit"));
+            config.setPassword(password);
+            config.setMaxPoolSize(maxPoolSize);
+            config.setGpt3_sleepTime(gpt3SleepTime);
+            config.setGpt4_sleepTime(gpt4SleepTime);
+            config.setVscode_version(vscodeVersion);
+            config.setCopilot_chat_version(copilotChatVersion);
+            config.setGet_token_url(getTokenUrl);
+            config.setOne_copilot_limit(oneCopilotLimit);
+            config.setOne_coCopilot_limit(oneCoCopilotLimit);
+            config.setOne_selfCopilot_limit(oneSelfCopilotLimit);
 
-            if (!exist) {
-                // 将修改后的 JSONObject 转换为格式化的 JSON 字符串
-                String updatedJson = com.alibaba.fastjson.JSON.toJSONString(jsonObject, SerializerFeature.PrettyFormat);
-                Files.write(Paths.get(parent), updatedJson.getBytes());
-            }
             return config;
         } catch (Exception e) {
             e.printStackTrace();
@@ -542,7 +492,6 @@ public class ChatController {
         return responseEntity;
     }
 
-
     /**
      * 请求体不是json 会报Request body is missing or not in JSON format
      * Authorization token缺失  会报Authorization header is missing
@@ -624,7 +573,6 @@ public class ChatController {
 
         return getObjectResponseEntity(response, future);
     }
-
 
     /**
      * 请求体不是json 会报Request body is missing or not in JSON format
@@ -726,6 +674,28 @@ public class ChatController {
         return responseEntity;
     }
 
+    private String[] extractApiKeyAndRequestUrl(String authorizationHeader, Conversation conversation) throws IllegalArgumentException {
+        if (conversation == null) {
+            throw new IllegalArgumentException("Request body is missing or not in JSON format");
+        }
+        String apiKey = null;
+        String requestUrl = null;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            String keyAndUrl = authorizationHeader.substring(7);
+            if (!keyAndUrl.contains("|")) {
+                apiKey = keyAndUrl;
+            } else {
+                String[] parts = keyAndUrl.split("\\|");
+                requestUrl = parts[0];
+                apiKey = parts[1];
+            }
+        }
+        if (apiKey == null) {
+            throw new IllegalArgumentException("Authorization ApiKey is missing");
+        }
+        return new String[]{requestUrl, apiKey};
+    }
+
     @PostMapping(value = "/self/v1/chat/completions")
     public ResponseEntity<Object> selfConversation(HttpServletResponse response,
                                                    HttpServletRequest request,
@@ -735,17 +705,11 @@ public class ChatController {
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
-                if (conversation == null) {
-                    return new ResponseEntity<>(Result.error("Request body is missing or not in JSON format"), HttpStatus.BAD_REQUEST);
-                }
-                String apiKey;
-                if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                    apiKey = authorizationHeader.substring(7);
-                } else {
-                    return new ResponseEntity<>(Result.error("Authorization header is missing"), HttpStatus.UNAUTHORIZED);
-                }
+                String[] result = extractApiKeyAndRequestUrl(authorizationHeader, conversation);
+                String requestUrl = result[0];
+                String apiKey = result[1];
                 if (!selfTokenList.containsKey(apiKey)) {
-                    String token = getSelfToken(apiKey);
+                    String token = getSelfToken(apiKey, requestUrl);
                     if (token == null) {
                         return new ResponseEntity<>(Result.error("自定义self APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                     }
@@ -774,7 +738,7 @@ public class ChatController {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else {
-                            String token = getSelfToken(apiKey);
+                            String token = getSelfToken(apiKey, requestUrl);
                             if (token == null) {
                                 return new ResponseEntity<>(Result.error("自定义self APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                             }
@@ -1037,17 +1001,11 @@ public class ChatController {
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
-                if (conversation == null) {
-                    return new ResponseEntity<>(Result.error("Request body is missing or not in JSON format"), HttpStatus.BAD_REQUEST);
-                }
-                String apiKey;
-                if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                    apiKey = authorizationHeader.substring(7);
-                } else {
-                    return new ResponseEntity<>(Result.error("Authorization header is missing"), HttpStatus.UNAUTHORIZED);
-                }
+                String[] result = extractApiKeyAndRequestUrl(authorizationHeader, conversation);
+                String requestUrl = result[0];
+                String apiKey = result[1];
                 if (!selfTokenList.containsKey(apiKey)) {
-                    String token = getSelfToken(apiKey);
+                    String token = getSelfToken(apiKey, requestUrl);
                     if (token == null) {
                         return new ResponseEntity<>(Result.error("自定义APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                     }
@@ -1075,7 +1033,7 @@ public class ChatController {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else {
-                            String token = getSelfToken(apiKey);
+                            String token = getSelfToken(apiKey, requestUrl);
                             if (token == null) {
                                 return new ResponseEntity<>(Result.error("自定义 APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                             }
@@ -1093,7 +1051,6 @@ public class ChatController {
                 throw new RuntimeException(e);
             }
         }, executor);
-
         return getObjectResponseEntity(future);
     }
 
@@ -1178,8 +1135,10 @@ public class ChatController {
      * @return
      * @throws IOException
      */
-    private String getSelfToken(String apiKey) throws IOException {
-        Request request = new Request.Builder().url(get_token_url)
+    private String getSelfToken(String apiKey, String temRequestUrl) throws IOException {
+        String requestUrl = Optional.ofNullable(temRequestUrl).orElse(get_token_url);
+        log.info("请求token地址: " + requestUrl + " apiKey: " + apiKey);
+        Request request = new Request.Builder().url(requestUrl)
                 .addHeader("authorization", "token " + apiKey)
                 .addHeader("Editor-Version", vscode_version)
                 .addHeader("Editor-Plugin-Version", "copilot-chat/" + copilot_chat_version)
