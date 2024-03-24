@@ -659,7 +659,7 @@ public class ChatController {
 
     /**
      * 返回异步responseEntity
-     * 
+     *
      * @param response
      * future
      */
@@ -708,6 +708,18 @@ public class ChatController {
         return new String[]{requestUrl, apiKey};
     }
 
+    /**
+     * 请求体不是json 会报Request body is missing or not in JSON format
+     * Authorization token缺失  会报Authorization header is missing
+     * 无法请求到chat_token 会报self copilot APIKey is wrong
+     *
+     * @param response
+     * @param request
+     * @param conversation
+     * @return
+     * @throws JSONException
+     * @throws IOException
+     */
     @PostMapping(value = "/self/v1/chat/completions")
     public ResponseEntity<Object> selfConversation(HttpServletResponse response,
                                                    HttpServletRequest request,
