@@ -380,6 +380,7 @@ public class ChatController {
 
     /**
      * 为每个密钥设置一个专属的machineId
+     *
      * @return hexString.toString();
      */
     private static String generateMachineId() {
@@ -556,7 +557,7 @@ public class ChatController {
                     String machineId = generateMachineId();
                     machineIdList.put(apiKey, machineId);
                     copilotTokenList.put(apiKey, token);
-                    log.info("Github CopilotToken初始化成功！对应的机械码为："+ machineId);
+                    log.info("Github CopilotToken初始化成功！对应的机械码为：" + machineId);
                 } else {
                     int requestNum = copilotTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > one_copilot_limit) {
@@ -568,7 +569,7 @@ public class ChatController {
                 String chat_token = copilotTokenList.get(apiKey);
                 Map<String, String> headersMap = new HashMap<>();
                 //添加头部
-                addHeader(headersMap, apiKey, chat_token);
+                addHeader(headersMap, chat_token, apiKey);
                 String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
                 RequestBody requestBody = RequestBody.create(json, JSON);
                 Request.Builder requestBuilder = new Request.Builder().url(github_chat_url).post(requestBody);
@@ -641,7 +642,7 @@ public class ChatController {
                     String machineId = generateMachineId();
                     machineIdList.put(apiKey, machineId);
                     coCopilotTokenList.put(apiKey, token);
-                    log.info("coCopilotToken初始化成功！对应的机械码为："+ machineId);
+                    log.info("coCopilotToken初始化成功！对应的机械码为：" + machineId);
                 } else {
                     int requestNum = coCopilotTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > one_coCopilot_limit) {
@@ -770,7 +771,7 @@ public class ChatController {
                     String machineId = generateMachineId();
                     machineIdList.put(apiKey, machineId);
                     selfTokenLimitList.put(apiKey, new AtomicInteger(1));
-                    log.info("自定义selfToken初始化成功！对应的机械码为："+ machineId);
+                    log.info("自定义selfToken初始化成功！对应的机械码为：" + machineId);
                 } else {
                     int requestNum = selfTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > one_selfCopilot_limit) {
@@ -891,7 +892,7 @@ public class ChatController {
                     String machineId = generateMachineId();
                     machineIdList.put(apiKey, machineId);
                     copilotTokenList.put(apiKey, token);
-                    log.info("Github CopilotToken初始化成功！对应的机械码为："+ machineId);
+                    log.info("Github CopilotToken初始化成功！对应的机械码为：" + machineId);
                 } else {
                     int requestNum = copilotTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > one_copilot_limit) {
@@ -992,7 +993,7 @@ public class ChatController {
                     String machineId = generateMachineId();
                     machineIdList.put(apiKey, machineId);
                     coCopilotTokenList.put(apiKey, token);
-                    log.info("coCopilotToken初始化成功！对应的机械码为："+ machineId);
+                    log.info("coCopilotToken初始化成功！对应的机械码为：" + machineId);
                 } else {
                     int requestNum = coCopilotTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > one_coCopilot_limit) {
@@ -1072,7 +1073,7 @@ public class ChatController {
                     String machineId = generateMachineId();
                     machineIdList.put(apiKey, machineId);
                     selfTokenList.put(apiKey, token);
-                    log.info("自定义selfToken初始化成功！对应的机械码为："+ machineId);
+                    log.info("自定义selfToken初始化成功！对应的机械码为：" + machineId);
                 } else {
                     int requestNum = selfTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > one_selfCopilot_limit) {
@@ -1213,6 +1214,7 @@ public class ChatController {
 
     /**
      * 获取模型
+     *
      * @return
      */
     private Object getModels() {
