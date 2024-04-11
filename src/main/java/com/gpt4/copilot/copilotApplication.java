@@ -17,7 +17,9 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.UUID;
 
 /**
  * @author YANGYANG
@@ -45,22 +47,88 @@ public class copilotApplication {
 
     private static SystemSetting loadConfig(String configFilePath) {
         File jsonFile = new File(configFilePath);
-        if (!jsonFile.exists()) {
-            createEmptyConfigFile(configFilePath);
+        Path jsonFilePath = Paths.get(configFilePath);
+        if (!jsonFile.exists() || jsonFile.length() == 0){
+            try {
+                if (!jsonFile.exists()) {
+                    // 创建文件machineIdList.json
+                    Files.createFile(jsonFilePath);
+                }
+                // 往 config.json 文件中添加一个空数组，防止重启报错
+                createEmptyConfigFile(configFilePath);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
         JSONObject jsonObject = readJsonFile(configFilePath);
         // 将修改后的 JSONObject 转换为格式化的 JSON 字符串
-
         return parseConfig(configFilePath, jsonObject);
     }
 
     private static void createEmptyConfigFile(String configFilePath) {
         try {
-            Files.writeString(Paths.get(configFilePath), "{}");
+            // 读取 JSON 文件内容
+            String jsonContent = new String(Files.readAllBytes(Paths.get(configFilePath)));
+            // 将 JSON 字符串解析为 JSONObject
+            JSONObject jsonObject = com.alibaba.fastjson2.JSON.parseObject(jsonContent);
+            if(jsonObject == null){
+                jsonObject = new JSONObject();
+            }
+            String password = getValueOrDefault(jsonObject, "password", UUID.randomUUID().toString(), "config.json没有新增password参数,现已增加！");
+            log.info("config.json password：" + password);
+            if (password.length() == 0) {
+                password = UUID.randomUUID().toString();
+                jsonObject.put("password", password);
+                log.info("config.json password未设置，现已自动帮您设置！");
+            }
+            getValueOrDefault(jsonObject, "gpt4_prompt", true, "config.json没有新增gpt4_prompt参数,现已增加！");
+            getValueOrDefault(jsonObject, "gpt3_sleepTime", 0, "config.json没有新增gpt3_sleepTime参数,现已增加！");
+            getValueOrDefault(jsonObject, "gpt4_sleepTime", 100, "config.json没有新增gpt4_sleepTime参数,现已增加！");
+            getValueOrDefault(jsonObject, "maxPoolSize", 300, "config.json没有新增maxPoolSize参数,现已增加！");
+            getValueOrDefault(jsonObject, "vscode_version", copilotApplication.getLatestVSCodeVersion(), "config.json没有新增vscode_version参数,现已增加！");
+            getValueOrDefault(jsonObject, "copilot_chat_version", copilotApplication.getLatestExtensionVersion("GitHub", "copilot-chat"), "config.json没有新增copilot_chat_version参数,现已增加！");
+            getValueOrDefault(jsonObject, "get_token_url", "https://api.cocopilot.org/copilot_internal/v2/token", "config.json没有新增get_token_url参数,现已增加！");
+            getValueOrDefault(jsonObject, "one_copilot_limit", 30, "config.json没有新增one_copilot_limit参数,现已增加！");
+            getValueOrDefault(jsonObject, "one_coCopilot_limit", 30, "config.json没有新增one_coCopilot_limit参数,现已增加！");
+            getValueOrDefault(jsonObject, "one_selfCopilot_limit", 30, "config.json没有新增one_selfCopilot_limit参数,现已增加！");
+
+            // 将修改后的 JSONObject 转换为格式化的 JSON 字符串
+            String updatedJson = com.alibaba.fastjson.JSON.toJSONString(jsonObject, SerializerFeature.PrettyFormat);
+            Files.write(Paths.get(configFilePath), updatedJson.getBytes());
             System.out.println("config.json创建完成: " + configFilePath);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * 获取config.json里的值
+     *
+     * @param jsonObject
+     * @param key
+     * @param defaultValue
+     * @param logMessage
+     * @param <T>
+     * @return
+     */
+    private static <T> T getValueOrDefault(JSONObject jsonObject, String key, T defaultValue, String logMessage) {
+        T value;
+        if (jsonObject == null) {
+            value = null;
+        }
+        else {
+            try {
+                value = (T) jsonObject.get(key);
+            } catch (JSONException e) {
+                value = null;
+            }
+        }
+        if (value == null) {
+            jsonObject.put(key, defaultValue);
+            log.info(logMessage);
+            value = defaultValue;
+        }
+        return value;
     }
 
     private static JSONObject readJsonFile(String configFilePath) {
@@ -192,8 +260,8 @@ public class copilotApplication {
             String latestVersion = getLatestVSCodeVersion();
             String latestChatVersion = getLatestExtensionVersion("GitHub", "copilot-chat");
             if (latestVersion != null && latestChatVersion != null) {
-                ChatController.setVscode_version(latestVersion);
-                ChatController.setCopilot_chat_version("copilot-chat/" + latestChatVersion);
+                ChatController.getSystemSetting().setVscode_version(latestVersion);
+                ChatController.getSystemSetting().setCopilot_chat_version("copilot-chat/" + latestChatVersion);
             }
             String parent = ChatController.selectFile();
             // 读取 JSON 文件内容
@@ -204,8 +272,8 @@ public class copilotApplication {
             String updatedJson = com.alibaba.fastjson.JSON.toJSONString(jsonObject, SerializerFeature.PrettyFormat);
             Files.write(Paths.get(parent), updatedJson.getBytes());
             System.out.println("===================配置更新说明========================");
-            System.out.println("vscode_version：" + ChatController.getVscode_version());
-            System.out.println("copilot_chat_version：" + ChatController.getCopilot_chat_version());
+            System.out.println("vscode_version：" + ChatController.getSystemSetting().getVscode_version());
+            System.out.println("copilot_chat_version：" + ChatController.getSystemSetting().getCopilot_chat_version());
             System.out.println("======================================================");
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -216,26 +284,25 @@ public class copilotApplication {
         System.out.println("\n=====================配置说明==========================");
         System.out.println("serverPort：" + config.getServerPort());
         System.out.println("prefix：" + config.getPrefix());
-        System.out.println("password：" + ChatController.getPassword());
-        System.out.println("maxPoolSize：" + ChatController.getMaxPoolSize());
-        System.out.println("gpt3_sleepTime：" + ChatController.getGpt3_sleepTime());
-        System.out.println("gpt4_sleepTime：" + ChatController.getGpt4_sleepTime());
+        System.out.println("password：" + ChatController.getSystemSetting().getPassword());
+        System.out.println("maxPoolSize：" + ChatController.getSystemSetting().getMaxPoolSize());
+        System.out.println("gpt3_sleepTime：" + ChatController.getSystemSetting().getGpt3_sleepTime());
+        System.out.println("gpt4_sleepTime：" + ChatController.getSystemSetting().getGpt4_sleepTime());
+        System.out.println("gpt4_prompt：" + ChatController.getSystemSetting().getGpt4_prompt());
         System.out.println("vscode_version：" + getLatestVSCodeVersion());
         System.out.println("copilot_chat_version：" + getLatestExtensionVersion("GitHub", "copilot-chat"));
-        System.out.println("get_token_url：" + ChatController.getGet_token_url());
-        System.out.println("one_copilot_limit：" + ChatController.getOne_copilot_limit());
-        System.out.println("one_coCopilot_limit：" + ChatController.getOne_coCopilot_limit());
-        System.out.println("one_selfCopilot_limit：" + ChatController.getOne_selfCopilot_limit());
+        System.out.println("get_token_url：" + ChatController.getSystemSetting().getGet_token_url());
+        System.out.println("one_copilot_limit：" + ChatController.getSystemSetting().getOne_copilot_limit());
+        System.out.println("one_coCopilot_limit：" + ChatController.getSystemSetting().getOne_coCopilot_limit());
+        System.out.println("one_selfCopilot_limit：" + ChatController.getSystemSetting().getOne_selfCopilot_limit());
         System.out.println("gpt4-copilot-java 初始化接口成功！");
         System.out.println("======================================================");
-        System.out.println("******原神gpt4-copilot-java-native v0.1.2启动成功******");
-        System.out.println("* 采用graalvm打包，运行内存大幅度减小");
-        System.out.println("* 适配官方requestBody,减小被查询异常");
-        System.out.println("* 新增加入token超时日志，分别查看请求日志");
+        System.out.println("******原神gpt4-copilot-java-native v0.1.3启动成功******");
         System.out.println("* 使用ConcurrentHashMap，粗略的对于每个密钥按每分钟进行限速");
+        System.out.println("* 新增环境变量用于对gpt-4*等模型进行系统prompt提示");
         System.out.println("* 新增url|apikey形式传入/self/*接口，用于自定义地址和密钥");
-        System.out.println("* 新增每个密钥对于特定的机器码，一秘钥一机器码，减小被查询异常");
         System.out.println("* 修复部分bug，优化读取config.json代码，提升稳定性");
+        System.out.println("* 新增每个密钥对于特定的机器码，且保存在文件中，一秘钥一机器码，减小被查询异常");
         System.out.println("URL地址：http://0.0.0.0:" + config.getServerPort() + config.getPrefix() + "");
         System.out.println("======================================================");
     }

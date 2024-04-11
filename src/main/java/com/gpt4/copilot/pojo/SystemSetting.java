@@ -22,6 +22,10 @@ public class SystemSetting {
      */
     private String prefix;
     /**
+     * gpt4 system prompt
+     */
+    private Boolean gpt4_prompt;
+    /**
      * gpt4 sleep time
      */
     private Integer gpt4_sleepTime;
