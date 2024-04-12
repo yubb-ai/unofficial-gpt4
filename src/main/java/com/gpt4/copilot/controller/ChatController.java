@@ -506,7 +506,7 @@ public class ChatController {
                 Map<String, String> headersMap = new HashMap<>();
                 //添加头部
                 addHeader(headersMap, chat_token, apiKey);
-                String model = (conversation.getModel() != null) ? conversation.getModel() : "gpt-3.5-turbo";
+                String model = modelAdjust(conversation);
                 Request streamRequest = getPrompt(conversation, model, headersMap);
                 try (Response resp = client.newCall(streamRequest).execute()) {
                     if (!resp.isSuccessful()) {
@@ -533,6 +533,20 @@ public class ChatController {
         }, executor);
 
         return getObjectResponseEntity(response, future);
+    }
+
+    private String modelAdjust(Conversation conversation) {
+        String model = conversation.getModel();
+        if(model == null){
+            conversation.setModel("gpt-3.5-turbo");
+            return "gpt-3.5-turbo";
+        }
+        else{
+            if(model.startsWith("gpt-4")) {
+                conversation.setModel("gpt-4");
+            }
+            return model;
+        }
     }
 
     /**
@@ -587,7 +601,7 @@ public class ChatController {
                 Map<String, String> headersMap = new HashMap<>();
                 //添加头部
                 addHeader(headersMap, chat_token, apiKey);
-                String model = (conversation.getModel() != null) ? conversation.getModel() : "gpt-3.5-turbo";
+                String model = modelAdjust(conversation);
                 Request streamRequest = getPrompt(conversation, model, headersMap);
                 try (Response resp = client.newCall(streamRequest).execute()) {
                     if (!resp.isSuccessful()) {
@@ -645,7 +659,7 @@ public class ChatController {
      * @param conversation
      * @throws IOException
      */
-    private String[] extractApiKeyAndRequestUrl(String authorizationHeader, Conversation conversation) throws IllegalArgumentException {
+    private String[] extractApiKeyAndRequestUrl(String authorizationHeader, Object conversation) throws IllegalArgumentException {
         if (conversation == null) {
             throw new IllegalArgumentException("Request body is missing or not in JSON format");
         }
@@ -712,7 +726,7 @@ public class ChatController {
                 Map<String, String> headersMap = new HashMap<>();
                 //添加头部
                 addHeader(headersMap, chat_token, apiKey);
-                String model = (conversation.getModel() != null) ? conversation.getModel() : "gpt-3.5-turbo";
+                String model = modelAdjust(conversation);
                 Request streamRequest = getPrompt(conversation, model, headersMap);
                 try (Response resp = client.newCall(streamRequest).execute()) {
                     if (!resp.isSuccessful()) {
@@ -792,6 +806,22 @@ public class ChatController {
         }
     }
 
+    private Request getEmdPrompt(Object conversation,
+                              Map<String, String> headersMap) {
+        try {
+            String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
+            RequestBody requestBody = RequestBody.create(json, JSON);
+            Request.Builder requestBuilder = new Request.Builder().url(github_embaddings).post(requestBody);
+            headersMap.forEach(requestBuilder::addHeader);
+            Request streamRequest = requestBuilder.build();
+            return streamRequest;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+
     /**
      * ghu/gho 请求
      * 请求体不是json 会报Request body is missing or not in JSON format
@@ -808,7 +838,7 @@ public class ChatController {
     @PostMapping(value = "/v1/embeddings")
     public ResponseEntity<Object> coPilotEmbeddings(HttpServletResponse response,
                                                     HttpServletRequest request,
-                                                    @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
+                                                    @org.springframework.web.bind.annotation.RequestBody Object conversation) {
         String header = request.getHeader("Authorization");
         String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
@@ -844,11 +874,7 @@ public class ChatController {
                 Map<String, String> headersMap = new HashMap<>();
                 //添加头部
                 addHeader(headersMap, chat_token, apiKey);
-                String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
-                RequestBody requestBody = RequestBody.create(json, JSON);
-                Request.Builder requestBuilder = new Request.Builder().url(github_embaddings).post(requestBody);
-                headersMap.forEach(requestBuilder::addHeader);
-                Request streamRequest = requestBuilder.build();
+                Request streamRequest = getEmdPrompt(conversation, headersMap);
                 try (Response resp = client.newCall(streamRequest).execute()) {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
@@ -908,7 +934,7 @@ public class ChatController {
     @PostMapping(value = "/cocopilot/v1/embeddings")
     public ResponseEntity<Object> coCoPilotEmbeddings(HttpServletResponse response,
                                                       HttpServletRequest request,
-                                                      @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
+                                                      @org.springframework.web.bind.annotation.RequestBody Object conversation) {
         String header = request.getHeader("Authorization");
         String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
@@ -944,11 +970,7 @@ public class ChatController {
                 Map<String, String> headersMap = new HashMap<>();
                 //添加头部
                 addHeader(headersMap, chat_token, apiKey);
-                String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
-                RequestBody requestBody = RequestBody.create(json, JSON);
-                Request.Builder requestBuilder = new Request.Builder().url(github_embaddings).post(requestBody);
-                headersMap.forEach(requestBuilder::addHeader);
-                Request streamRequest = requestBuilder.build();
+                Request streamRequest = getEmdPrompt(conversation, headersMap);
                 try (Response resp = client.newCall(streamRequest).execute()) {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
@@ -993,7 +1015,7 @@ public class ChatController {
     @PostMapping(value = "/self/v1/embeddings")
     public ResponseEntity<Object> selfEmbeddings(HttpServletResponse response,
                                                  HttpServletRequest request,
-                                                 @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
+                                                 @org.springframework.web.bind.annotation.RequestBody Object conversation) {
         String header = request.getHeader("Authorization");
         String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
@@ -1022,11 +1044,7 @@ public class ChatController {
                 Map<String, String> headersMap = new HashMap<>();
                 //添加头部
                 addHeader(headersMap, chat_token, apiKey);
-                String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
-                RequestBody requestBody = RequestBody.create(json, JSON);
-                Request.Builder requestBuilder = new Request.Builder().url(github_embaddings).post(requestBody);
-                headersMap.forEach(requestBuilder::addHeader);
-                Request streamRequest = requestBuilder.build();
+                Request streamRequest = getEmdPrompt(conversation, headersMap);
                 try (Response resp = client.newCall(streamRequest).execute()) {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
@@ -1054,7 +1072,7 @@ public class ChatController {
     }
 
     public Object againEmbeddings(HttpServletResponse response,
-                                  @org.springframework.web.bind.annotation.RequestBody Conversation conversation,
+                                  @org.springframework.web.bind.annotation.RequestBody Object conversation,
                                   String token,
                                   String apiKey) {
         try {
@@ -1283,6 +1301,11 @@ public class ChatController {
      */
     private String saveMadchineId(String apiKey) {
         try {
+            if(machineIdList.containsKey(apiKey)){
+                String machineId = machineIdList.get(apiKey);
+                log.info("机械码读取成功！对应的机械码为：" + machineId);
+                return machineId;
+            }
             String machineId = generateMachineId();
             log.info("机械码生成成功！对应的机械码为：" + machineId);
             machineIdList.put(apiKey, machineId);

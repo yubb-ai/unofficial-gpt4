@@ -51,7 +51,7 @@ public class copilotApplication {
         if (!jsonFile.exists() || jsonFile.length() == 0){
             try {
                 if (!jsonFile.exists()) {
-                    // 创建文件machineIdList.json
+                    // 创建文件config.json
                     Files.createFile(jsonFilePath);
                 }
                 // 往 config.json 文件中添加一个空数组，防止重启报错
@@ -298,6 +298,7 @@ public class copilotApplication {
         System.out.println("gpt4-copilot-java 初始化接口成功！");
         System.out.println("======================================================");
         System.out.println("******原神gpt4-copilot-java-native v0.1.3启动成功******");
+        System.out.println("* 对chat接口的模型进行重定向，减少潜在的风险");
         System.out.println("* 使用ConcurrentHashMap，粗略的对于每个密钥按每分钟进行限速");
         System.out.println("* 新增环境变量用于对gpt-4*等模型进行系统prompt提示");
         System.out.println("* 新增url|apikey形式传入/self/*接口，用于自定义地址和密钥");
