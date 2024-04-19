@@ -1,15 +1,15 @@
 {
-	"password":"920052ec-14fc-4215-974d-d6fd3c89dd91",
-	"gpt4_prompt":true,
-	"gpt3_sleepTime":0,
-	"gpt4_sleepTime":100,
-	"maxPoolSize":300,
-	"vscode_version":"1.88.0",
-	"copilot_chat_version":"0.15.2024041001",
-	"get_token_url":"https://api.cocopilot.org/copilot_internal/v2/token",
-	"one_copilot_limit":30,
-	"one_coCopilot_limit":30,
-	"one_selfCopilot_limit":30,
-	"serverPort":8080,
-	"prefix":"/"
+  "password": "920052ec-14fc-4215-974d-d6fd3c89dd91",
+  "gpt4_prompt": true,
+  "gpt3_sleepTime": 0,
+  "gpt4_sleepTime": 100,
+  "maxPoolSize": 300,
+  "vscode_version": "1.88.0",
+  "copilot_chat_version": "0.15.2024041001",
+  "get_token_url": "https://api.cocopilot.org/copilot_internal/v2/token",
+  "one_copilot_limit": 30,
+  "one_coCopilot_limit": 30,
+  "one_selfCopilot_limit": 30,
+  "serverPort": 8080,
+  "prefix": "/"
 }

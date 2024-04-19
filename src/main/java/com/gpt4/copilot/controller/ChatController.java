@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -157,7 +158,7 @@ public class ChatController {
             File jsonFile = new File(parent);
             Path jsonFilePath = Paths.get(parent);
             // 如果 JSON 文件不存在，创建一个新的 JSON 对象
-            if (!jsonFile.exists() || jsonFile.length() == 0){
+            if (!jsonFile.exists() || jsonFile.length() == 0) {
                 try {
                     if (!jsonFile.exists()) {
                         // 创建文件machineIdList.json
@@ -476,15 +477,7 @@ public class ChatController {
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
-                if (conversation == null) {
-                    return new ResponseEntity<>(Result.error("Request body is missing or not in JSON format"), HttpStatus.BAD_REQUEST);
-                }
-                String apiKey;
-                if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                    apiKey = authorizationHeader.substring(7);
-                } else {
-                    return new ResponseEntity<>(Result.error("Authorization header is missing"), HttpStatus.UNAUTHORIZED);
-                }
+                String apiKey = getRequestApikey(authorizationHeader, conversation);
                 if (!copilotTokenList.containsKey(apiKey)) {
                     String token = getCopilotToken(apiKey);
                     if (token == null) {
@@ -512,6 +505,8 @@ public class ChatController {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                        } else if (resp.code() == 400) {
+                            return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getCopilotToken(apiKey);
                             if (token == null) {
@@ -526,8 +521,8 @@ public class ChatController {
                         outPutChat(response, resp, conversation, model);
                     }
                 }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
             }
             return null;
         }, executor);
@@ -535,14 +530,26 @@ public class ChatController {
         return getObjectResponseEntity(response, future);
     }
 
+    private String getRequestApikey(String authorizationHeader, @org.springframework.web.bind.annotation.RequestBody Object conversation) {
+        if (conversation == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is missing or not in JSON format");
+        }
+        String apiKey;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            apiKey = authorizationHeader.substring(7);
+        } else {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authorization header is missing");
+        }
+        return apiKey;
+    }
+
     private String modelAdjust(Conversation conversation) {
         String model = conversation.getModel();
-        if(model == null){
+        if (model == null) {
             conversation.setModel("gpt-3.5-turbo");
             return "gpt-3.5-turbo";
-        }
-        else{
-            if(model.startsWith("gpt-4")) {
+        } else {
+            if (model.startsWith("gpt-4")) {
                 conversation.setModel("gpt-4");
             }
             return model;
@@ -571,15 +578,7 @@ public class ChatController {
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
-                if (conversation == null) {
-                    return new ResponseEntity<>(Result.error("Request body is missing or not in JSON format"), HttpStatus.BAD_REQUEST);
-                }
-                String apiKey;
-                if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                    apiKey = authorizationHeader.substring(7);
-                } else {
-                    return new ResponseEntity<>(Result.error("Authorization header is missing"), HttpStatus.UNAUTHORIZED);
-                }
+                String apiKey = getRequestApikey(authorizationHeader, conversation);
                 if (!coCopilotTokenList.containsKey(apiKey)) {
                     String token = getCoCoToken(apiKey);
                     if (token == null) {
@@ -607,6 +606,8 @@ public class ChatController {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                        } else if (resp.code() == 400) {
+                            return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getCoCoToken(apiKey);
                             if (token == null) {
@@ -621,8 +622,8 @@ public class ChatController {
                         outPutChat(response, resp, conversation, model);
                     }
                 }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
             }
             return null;
         }, executor);
@@ -661,7 +662,7 @@ public class ChatController {
      */
     private String[] extractApiKeyAndRequestUrl(String authorizationHeader, Object conversation) throws IllegalArgumentException {
         if (conversation == null) {
-            throw new IllegalArgumentException("Request body is missing or not in JSON format");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is missing or not in JSON format");
         }
         String apiKey = null;
         String requestUrl = null;
@@ -732,6 +733,8 @@ public class ChatController {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                        } else if (resp.code() == 400) {
+                            return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getSelfToken(apiKey, requestUrl);
                             if (token == null) {
@@ -746,8 +749,8 @@ public class ChatController {
                         outPutChat(response, resp, conversation, model);
                     }
                 }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
             }
             return null;
         }, executor);
@@ -807,7 +810,7 @@ public class ChatController {
     }
 
     private Request getEmdPrompt(Object conversation,
-                              Map<String, String> headersMap) {
+                                 Map<String, String> headersMap) {
         try {
             String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
             RequestBody requestBody = RequestBody.create(json, JSON);
@@ -819,7 +822,6 @@ public class ChatController {
             throw new RuntimeException(e);
         }
     }
-
 
 
     /**
@@ -844,15 +846,7 @@ public class ChatController {
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
-                if (conversation == null) {
-                    return new ResponseEntity<>(Result.error("Request body is missing or not in JSON format"), HttpStatus.BAD_REQUEST);
-                }
-                String apiKey;
-                if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                    apiKey = authorizationHeader.substring(7);
-                } else {
-                    return new ResponseEntity<>(Result.error("Authorization header is missing"), HttpStatus.UNAUTHORIZED);
-                }
+                String apiKey = getRequestApikey(authorizationHeader, conversation);
                 if (!copilotTokenList.containsKey(apiKey)) {
                     String token = getCopilotToken(apiKey);
                     if (token == null) {
@@ -879,6 +873,8 @@ public class ChatController {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                        } else if (resp.code() == 400) {
+                            return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getCopilotToken(apiKey);
                             if (token == null) {
@@ -894,8 +890,8 @@ public class ChatController {
                     }
                 }
                 return null;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
             }
         }, executor);
 
@@ -940,15 +936,7 @@ public class ChatController {
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
-                if (conversation == null) {
-                    return new ResponseEntity<>(Result.error("Request body is missing or not in JSON format"), HttpStatus.BAD_REQUEST);
-                }
-                String apiKey;
-                if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                    apiKey = authorizationHeader.substring(7);
-                } else {
-                    return new ResponseEntity<>(Result.error("Authorization header is missing"), HttpStatus.UNAUTHORIZED);
-                }
+                String apiKey = getRequestApikey(authorizationHeader, conversation);
                 if (!coCopilotTokenList.containsKey(apiKey)) {
                     String token = getCoCoToken(apiKey);
                     if (token == null) {
@@ -975,6 +963,8 @@ public class ChatController {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                        } else if (resp.code() == 400) {
+                            return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getCoCoToken(apiKey);
                             if (token == null) {
@@ -990,8 +980,8 @@ public class ChatController {
                     }
                 }
                 return null;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
             }
         }, executor);
 
@@ -1049,6 +1039,8 @@ public class ChatController {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
+                        } else if (resp.code() == 400) {
+                            return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getSelfToken(apiKey, requestUrl);
                             if (token == null) {
@@ -1064,8 +1056,8 @@ public class ChatController {
                     }
                 }
                 return null;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
             }
         }, executor);
         return getObjectResponseEntity(future);
@@ -1094,7 +1086,7 @@ public class ChatController {
             }
             return null;
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -1301,7 +1293,7 @@ public class ChatController {
      */
     private String saveMadchineId(String apiKey) {
         try {
-            if(machineIdList.containsKey(apiKey)){
+            if (machineIdList.containsKey(apiKey)) {
                 String machineId = machineIdList.get(apiKey);
                 log.info("机械码读取成功！对应的机械码为：" + machineId);
                 return machineId;

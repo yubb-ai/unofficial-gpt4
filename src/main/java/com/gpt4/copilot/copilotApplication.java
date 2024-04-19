@@ -37,7 +37,7 @@ public class copilotApplication {
     private static final String VS_CODE_API_URL = "https://api.github.com/repos/microsoft/vscode/releases/latest";
     private static final String VS_CODE_CHAT_URL = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery";
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
         String configFilePath = System.getProperty("user.dir") + File.separator + "config.json";
         SystemSetting config = loadConfig(configFilePath);
         setSystemProperties(config);
@@ -48,7 +48,7 @@ public class copilotApplication {
     private static SystemSetting loadConfig(String configFilePath) {
         File jsonFile = new File(configFilePath);
         Path jsonFilePath = Paths.get(configFilePath);
-        if (!jsonFile.exists() || jsonFile.length() == 0){
+        if (!jsonFile.exists() || jsonFile.length() == 0) {
             try {
                 if (!jsonFile.exists()) {
                     // 创建文件config.json
@@ -71,7 +71,7 @@ public class copilotApplication {
             String jsonContent = new String(Files.readAllBytes(Paths.get(configFilePath)));
             // 将 JSON 字符串解析为 JSONObject
             JSONObject jsonObject = com.alibaba.fastjson2.JSON.parseObject(jsonContent);
-            if(jsonObject == null){
+            if (jsonObject == null) {
                 jsonObject = new JSONObject();
             }
             String password = getValueOrDefault(jsonObject, "password", UUID.randomUUID().toString(), "config.json没有新增password参数,现已增加！");
@@ -115,8 +115,7 @@ public class copilotApplication {
         T value;
         if (jsonObject == null) {
             value = null;
-        }
-        else {
+        } else {
             try {
                 value = (T) jsonObject.get(key);
             } catch (JSONException e) {
@@ -297,11 +296,12 @@ public class copilotApplication {
         System.out.println("one_selfCopilot_limit：" + ChatController.getSystemSetting().getOne_selfCopilot_limit());
         System.out.println("gpt4-copilot-java 初始化接口成功！");
         System.out.println("======================================================");
-        System.out.println("******原神gpt4-copilot-java-native v0.1.3启动成功******");
+        System.out.println("******原神gpt4-copilot-java-native v0.2.0启动成功******");
         System.out.println("* 对chat接口的模型进行重定向，减少潜在的风险");
         System.out.println("* 使用ConcurrentHashMap，粗略的对于每个密钥按每分钟进行限速");
         System.out.println("* 新增环境变量用于对gpt-4*等模型进行系统prompt提示");
         System.out.println("* 新增url|apikey形式传入/self/*接口，用于自定义地址和密钥");
+        System.out.println("* 新增对于消息报错提醒，减少对于用户的困扰");
         System.out.println("* 修复部分bug，优化读取config.json代码，提升稳定性");
         System.out.println("* 新增每个密钥对于特定的机器码，且保存在文件中，一秘钥一机器码，减小被查询异常");
         System.out.println("URL地址：http://0.0.0.0:" + config.getServerPort() + config.getPrefix() + "");

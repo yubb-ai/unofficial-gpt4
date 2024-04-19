@@ -1,7 +1,7 @@
 name: Build and Upload Spring Boot Native Image with Maven
 on:
   release:
-    types: [created]
+    types: [ created ]
   workflow_dispatch:
     inputs:
       tag:
@@ -13,100 +13,100 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set tag name
-      id: tag_name
-      run: |
-        if [ "${{ github.event_name }}" = "release" ]; then
-          echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
-        elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "::set-output name=tag::${{ github.event.inputs.tag }}"
-        fi
-      shell: bash
-    - name: Set up JDK 17
-      uses: actions/setup-java@v2
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    - name: Cache Maven packages
-      uses: actions/cache@v2
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
-    - uses: graalvm/setup-graalvm@v1
-      with:
-        java-version: '21'
-        distribution: 'graalvm'
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        native-image-job-reports: 'true'
-    - name: Set execute permissions for mvnw
-      run: chmod +x ./mvnw
-    - name: Set UTF-8 Encoding
-      run: echo "JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8" >> $GITHUB_ENV
-    - name: Build native image with Maven
-      run: |
-        ./mvnw native:compile -Pnative
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          mv ./target/gpt-4-copilot.exe ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe
-        else
-          mv ./target/gpt-4-copilot ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}
-        fi
-      shell: bash
-    - name: Create directory for packaging
-      run: |
-        mkdir packaging
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe ./packaging/gpt-4-copilot.exe
-        else
-          cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }} ./packaging/gpt-4-copilot
-        fi
-        cp ./config.json ./packaging/config.json
-      shell: bash
-    - name: Create ZIP (Unix)
-      if: runner.os != 'Windows'
-      run: |
-        cd packaging
-        zip -r ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip .
-      shell: bash
-    - name: Create ZIP (Windows)
-      if: runner.os == 'Windows'
-      run: |
-        Compress-Archive -Path packaging/* -DestinationPath ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
-      shell: powershell
-    - name: Check if release exists
-      id: check_release
-      run: |
-        RELEASE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-        https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ steps.tag_name.outputs.tag }}) || true
-        if echo "$RELEASE" | grep -q '"id":'; then
-          echo "::set-output name=exists::true"
-          UPLOAD_URL=$(echo "$RELEASE" | jq -r .upload_url)
-          echo "::set-output name=upload_url::${UPLOAD_URL}"
-        else
-          echo "::set-output name=exists::false"
-        fi
-      shell: bash
-    - name: Create Release if not exists
-      if: steps.check_release.outputs.exists == 'false'
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.tag_name.outputs.tag }}
-        release_name: Release ${{ steps.tag_name.outputs.tag }}
-        draft: false
-        prerelease: false
-    - name: Upload ZIP to Release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.check_release.outputs.exists == 'true' && steps.check_release.outputs.upload_url || steps.create_release.outputs.upload_url }}
-        asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
-        asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
-        asset_content_type: application/zip
+      - name: Set tag name
+        id: tag_name
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "::set-output name=tag::${GITHUB_REF#refs/tags/}"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "::set-output name=tag::${{ github.event.inputs.tag }}"
+          fi
+        shell: bash
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Cache Maven packages
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+      - name: Set execute permissions for mvnw
+        run: chmod +x ./mvnw
+      - name: Set UTF-8 Encoding
+        run: echo "JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8" >> $GITHUB_ENV
+      - name: Build native image with Maven
+        run: |
+          ./mvnw native:compile -Pnative
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mv ./target/gpt-4-copilot.exe ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe
+          else
+            mv ./target/gpt-4-copilot ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}
+          fi
+        shell: bash
+      - name: Create directory for packaging
+        run: |
+          mkdir packaging
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.exe ./packaging/gpt-4-copilot.exe
+          else
+            cp ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }} ./packaging/gpt-4-copilot
+          fi
+          cp ./config.json ./packaging/config.json
+        shell: bash
+      - name: Create ZIP (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd packaging
+          zip -r ../target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip .
+        shell: bash
+      - name: Create ZIP (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          Compress-Archive -Path packaging/* -DestinationPath ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
+        shell: powershell
+      - name: Check if release exists
+        id: check_release
+        run: |
+          RELEASE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ steps.tag_name.outputs.tag }}) || true
+          if echo "$RELEASE" | grep -q '"id":'; then
+            echo "::set-output name=exists::true"
+            UPLOAD_URL=$(echo "$RELEASE" | jq -r .upload_url)
+            echo "::set-output name=upload_url::${UPLOAD_URL}"
+          else
+            echo "::set-output name=exists::false"
+          fi
+        shell: bash
+      - name: Create Release if not exists
+        if: steps.check_release.outputs.exists == 'false'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag_name.outputs.tag }}
+          release_name: Release ${{ steps.tag_name.outputs.tag }}
+          draft: false
+          prerelease: false
+      - name: Upload ZIP to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.check_release.outputs.exists == 'true' && steps.check_release.outputs.upload_url || steps.create_release.outputs.upload_url }}
+          asset_path: ./target/gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
+          asset_name: gpt-4-copilot-${{ steps.tag_name.outputs.tag }}-${{ matrix.os }}.zip
+          asset_content_type: application/zip
