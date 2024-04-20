@@ -10,7 +10,6 @@ import com.gpt4.copilot.copilotApplication;
 import com.gpt4.copilot.pojo.Conversation;
 import com.gpt4.copilot.pojo.Result;
 import com.gpt4.copilot.pojo.SystemSetting;
-import com.unfbx.chatgpt.entity.chat.ChatCompletion;
 import com.unfbx.chatgpt.entity.chat.Message;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -471,7 +470,7 @@ public class ChatController {
     @PostMapping(value = "/v1/chat/completions")
     public ResponseEntity<Object> coPilotConversation(HttpServletResponse response,
                                                       HttpServletRequest request,
-                                                      @org.springframework.web.bind.annotation.RequestBody ChatCompletion conversation) {
+                                                      @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
         String header = request.getHeader("Authorization");
         String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
@@ -530,7 +529,7 @@ public class ChatController {
         return getObjectResponseEntity(response, future);
     }
 
-    private String getRequestApikey(String authorizationHeader, @org.springframework.web.bind.annotation.RequestBody ChatCompletion conversation) {
+    private String getRequestApikey(String authorizationHeader, @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
         checkConversation(conversation);
         String apiKey;
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
@@ -554,17 +553,16 @@ public class ChatController {
         return apiKey;
     }
 
-    private String modelAdjust(ChatCompletion conversation) {
+    private String modelAdjust(Conversation conversation) {
         String model = conversation.getModel();
-        if (model == null) {
-            conversation.setModel("gpt-3.5-turbo");
-            return "gpt-3.5-turbo";
+        String temModel;
+        if (model == null || !model.startsWith("gpt-4")) {
+            temModel = "gpt-3.5-turbo";
         } else {
-            if (model.startsWith("gpt-4")) {
-                conversation.setModel("gpt-4");
-            }
-            return model;
+            temModel = "gpt-4";
         }
+        conversation.setModel(temModel);
+        return model;
     }
 
     /**
@@ -583,7 +581,7 @@ public class ChatController {
     @PostMapping(value = "/cocopilot/v1/chat/completions")
     public ResponseEntity<Object> coCoPilotConversation(HttpServletResponse response,
                                                         HttpServletRequest request,
-                                                        @org.springframework.web.bind.annotation.RequestBody ChatCompletion conversation) {
+                                                        @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
         String header = request.getHeader("Authorization");
         String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
@@ -672,12 +670,12 @@ public class ChatController {
      * @param conversation
      * @throws IOException
      */
-    private String[] extractApiKeyAndRequestUrl(String authorizationHeader, ChatCompletion conversation) throws IllegalArgumentException {
+    private String[] extractApiKeyAndRequestUrl(String authorizationHeader, Conversation conversation) throws IllegalArgumentException {
         checkConversation(conversation);
         return getApiKeyAndRequestUrl(authorizationHeader);
     }
 
-    private void checkConversation(ChatCompletion conversation) {
+    private void checkConversation(Conversation conversation) {
         if (conversation == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is missing or not in JSON format");
         }
@@ -744,7 +742,7 @@ public class ChatController {
     @PostMapping(value = "/self/v1/chat/completions")
     public ResponseEntity<Object> selfConversation(HttpServletResponse response,
                                                    HttpServletRequest request,
-                                                   @org.springframework.web.bind.annotation.RequestBody ChatCompletion conversation) {
+                                                   @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
         String header = request.getHeader("Authorization");
         String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
@@ -816,7 +814,7 @@ public class ChatController {
      * @return
      */
     public Object againConversation(HttpServletResponse response,
-                                    @org.springframework.web.bind.annotation.RequestBody ChatCompletion conversation,
+                                    @org.springframework.web.bind.annotation.RequestBody Conversation conversation,
                                     String token,
                                     String apiKey,
                                     String model) {
@@ -839,22 +837,14 @@ public class ChatController {
         }
     }
 
-    private Request getPrompt(@org.springframework.web.bind.annotation.RequestBody ChatCompletion conversation, String model, Map<String, String> headersMap) {
+    private Request getPrompt(@org.springframework.web.bind.annotation.RequestBody Conversation conversation, String model, Map<String, String> headersMap) {
         try {
             if (model.startsWith("gpt-4") && systemSetting.getGpt4_prompt()) {
                 Message newMessage = getStringStringMap(model);
                 conversation.getMessages().add(0, newMessage);
-
-                log.info("gpt-4模型，添加系统消息注入！");
+                log.info(model + "模型，添加系统消息注入！");
             }
-
-            // 创建符合 github copilot 的请求体
-            Conversation newConversation = new Conversation();
-            newConversation.setStream(conversation.isStream());
-            newConversation.setModel(conversation.getModel());
-            newConversation.setMessages(conversation.getMessages());
-
-            String json = com.alibaba.fastjson2.JSON.toJSONString(newConversation);
+            String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
             RequestBody requestBody = RequestBody.create(json, JSON);
             Request.Builder requestBuilder = new Request.Builder().url(github_chat_url).post(requestBody);
             headersMap.forEach(requestBuilder::addHeader);
@@ -1273,7 +1263,7 @@ public class ChatController {
      * @param resp
      * @param conversation
      */
-    private void outPutChat(HttpServletResponse response, Response resp, ChatCompletion conversation, String model) {
+    private void outPutChat(HttpServletResponse response, Response resp, Conversation conversation, String model) {
         try {
             boolean isStream = conversation.isStream();
             int sleep_time = calculateSleepTime(model, isStream);
