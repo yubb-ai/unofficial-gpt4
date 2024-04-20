@@ -10,6 +10,8 @@ import com.gpt4.copilot.copilotApplication;
 import com.gpt4.copilot.pojo.Conversation;
 import com.gpt4.copilot.pojo.Result;
 import com.gpt4.copilot.pojo.SystemSetting;
+import com.unfbx.chatgpt.entity.chat.ChatCompletion;
+import com.unfbx.chatgpt.entity.chat.Message;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Data;
@@ -327,16 +329,14 @@ public class ChatController {
     }
 
     @NotNull
-    private static Map<String, String> getStringStringMap() {
+    private static Message getStringStringMap(String model) {
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
         String formattedNow = now.format(format);
-        Map<String, String> newMessage = new HashMap<>();
-        newMessage.put("role", "system");
-        newMessage.put("content", "\nYou are ChatGPT, a large language model trained by OpenAI." +
-                "\nKnowledge cutoff: 2021-09" +
-                "\nCurrent model: gpt-4" +
-                "\nCurrent time: " + formattedNow + "\n\n");
+        String systemContent = "\\nYou are ChatGPT, a large language model trained by OpenAI.\" +\n" +
+                "                \"\\nCurrent model: " + model + "\" +\n" +
+                "                \"\\nCurrent time: \"" + formattedNow + "\"\\n\\n ";
+        Message newMessage = Message.builder().role(Message.Role.SYSTEM).content(systemContent).build();
         return newMessage;
     }
 
@@ -471,7 +471,7 @@ public class ChatController {
     @PostMapping(value = "/v1/chat/completions")
     public ResponseEntity<Object> coPilotConversation(HttpServletResponse response,
                                                       HttpServletRequest request,
-                                                      @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
+                                                      @org.springframework.web.bind.annotation.RequestBody ChatCompletion conversation) {
         String header = request.getHeader("Authorization");
         String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
@@ -530,7 +530,18 @@ public class ChatController {
         return getObjectResponseEntity(response, future);
     }
 
-    private String getRequestApikey(String authorizationHeader, @org.springframework.web.bind.annotation.RequestBody Object conversation) {
+    private String getRequestApikey(String authorizationHeader, @org.springframework.web.bind.annotation.RequestBody ChatCompletion conversation) {
+        checkConversation(conversation);
+        String apiKey;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            apiKey = authorizationHeader.substring(7);
+        } else {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authorization header is missing");
+        }
+        return apiKey;
+    }
+
+    private String getEmbRequestApikey(String authorizationHeader, @org.springframework.web.bind.annotation.RequestBody Object conversation) {
         if (conversation == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is missing or not in JSON format");
         }
@@ -543,7 +554,7 @@ public class ChatController {
         return apiKey;
     }
 
-    private String modelAdjust(Conversation conversation) {
+    private String modelAdjust(ChatCompletion conversation) {
         String model = conversation.getModel();
         if (model == null) {
             conversation.setModel("gpt-3.5-turbo");
@@ -572,7 +583,7 @@ public class ChatController {
     @PostMapping(value = "/cocopilot/v1/chat/completions")
     public ResponseEntity<Object> coCoPilotConversation(HttpServletResponse response,
                                                         HttpServletRequest request,
-                                                        @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
+                                                        @org.springframework.web.bind.annotation.RequestBody ChatCompletion conversation) {
         String header = request.getHeader("Authorization");
         String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
@@ -654,22 +665,43 @@ public class ChatController {
     }
 
     /**
+     * Message
      * 获取url和apiKey
      *
      * @param authorizationHeader
      * @param conversation
      * @throws IOException
      */
-    private String[] extractApiKeyAndRequestUrl(String authorizationHeader, Object conversation) throws IllegalArgumentException {
+    private String[] extractApiKeyAndRequestUrl(String authorizationHeader, ChatCompletion conversation) throws IllegalArgumentException {
+        checkConversation(conversation);
+        return getApiKeyAndRequestUrl(authorizationHeader);
+    }
+
+    private void checkConversation(ChatCompletion conversation) {
         if (conversation == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is missing or not in JSON format");
         }
+        long tokens = conversation.tokens();
+        if (tokens > 32 * 1024) {
+            log.error("本次请求tokens is too long and over 32K: " + tokens);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Message is too long and over 32K");
+        } else if (tokens <= 0) {
+            log.error("本次请求tokens is none: " + tokens);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Message is none");
+        } else {
+            log.info("本次请求tokens: " + tokens);
+        }
+    }
+
+    @NotNull
+    private String[] getApiKeyAndRequestUrl(String authorizationHeader) {
         String apiKey = null;
         String requestUrl = null;
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String keyAndUrl = authorizationHeader.substring(7);
             if (!keyAndUrl.contains("|")) {
                 apiKey = keyAndUrl;
+                ;
             } else {
                 String[] parts = keyAndUrl.split("\\|");
                 requestUrl = parts[0];
@@ -680,6 +712,21 @@ public class ChatController {
             throw new IllegalArgumentException("Authorization ApiKey is missing");
         }
         return new String[]{requestUrl, apiKey};
+    }
+
+    /**
+     * embaddings
+     * 获取url和apiKey
+     *
+     * @param authorizationHeader
+     * @param conversation
+     * @throws IOException
+     */
+    private String[] extractEmbApiKeyAndRequestUrl(String authorizationHeader, Object conversation) throws IllegalArgumentException {
+        if (conversation == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body is missing or not in JSON format");
+        }
+        return getApiKeyAndRequestUrl(authorizationHeader);
     }
 
     /**
@@ -697,7 +744,7 @@ public class ChatController {
     @PostMapping(value = "/self/v1/chat/completions")
     public ResponseEntity<Object> selfConversation(HttpServletResponse response,
                                                    HttpServletRequest request,
-                                                   @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
+                                                   @org.springframework.web.bind.annotation.RequestBody ChatCompletion conversation) {
         String header = request.getHeader("Authorization");
         String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
@@ -730,6 +777,7 @@ public class ChatController {
                 String model = modelAdjust(conversation);
                 Request streamRequest = getPrompt(conversation, model, headersMap);
                 try (Response resp = client.newCall(streamRequest).execute()) {
+                    log.info("response code: " + resp.body());
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
@@ -768,7 +816,7 @@ public class ChatController {
      * @return
      */
     public Object againConversation(HttpServletResponse response,
-                                    @org.springframework.web.bind.annotation.RequestBody Conversation conversation,
+                                    @org.springframework.web.bind.annotation.RequestBody ChatCompletion conversation,
                                     String token,
                                     String apiKey,
                                     String model) {
@@ -791,14 +839,22 @@ public class ChatController {
         }
     }
 
-    private Request getPrompt(@org.springframework.web.bind.annotation.RequestBody Conversation conversation, String model, Map<String, String> headersMap) {
+    private Request getPrompt(@org.springframework.web.bind.annotation.RequestBody ChatCompletion conversation, String model, Map<String, String> headersMap) {
         try {
             if (model.startsWith("gpt-4") && systemSetting.getGpt4_prompt()) {
-                Map<String, String> newMessage = getStringStringMap();
+                Message newMessage = getStringStringMap(model);
                 conversation.getMessages().add(0, newMessage);
+
                 log.info("gpt-4模型，添加系统消息注入！");
             }
-            String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
+
+            // 创建符合 github copilot 的请求体
+            Conversation newConversation = new Conversation();
+            newConversation.setStream(conversation.isStream());
+            newConversation.setModel(conversation.getModel());
+            newConversation.setMessages(conversation.getMessages());
+
+            String json = com.alibaba.fastjson2.JSON.toJSONString(newConversation);
             RequestBody requestBody = RequestBody.create(json, JSON);
             Request.Builder requestBuilder = new Request.Builder().url(github_chat_url).post(requestBody);
             headersMap.forEach(requestBuilder::addHeader);
@@ -846,7 +902,7 @@ public class ChatController {
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
-                String apiKey = getRequestApikey(authorizationHeader, conversation);
+                String apiKey = getEmbRequestApikey(authorizationHeader, conversation);
                 if (!copilotTokenList.containsKey(apiKey)) {
                     String token = getCopilotToken(apiKey);
                     if (token == null) {
@@ -874,7 +930,7 @@ public class ChatController {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else if (resp.code() == 400) {
-                            return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
+                            return new ResponseEntity<>(Result.error("Model is not accessible"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getCopilotToken(apiKey);
                             if (token == null) {
@@ -936,7 +992,7 @@ public class ChatController {
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
-                String apiKey = getRequestApikey(authorizationHeader, conversation);
+                String apiKey = getEmbRequestApikey(authorizationHeader, conversation);
                 if (!coCopilotTokenList.containsKey(apiKey)) {
                     String token = getCoCoToken(apiKey);
                     if (token == null) {
@@ -964,7 +1020,7 @@ public class ChatController {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else if (resp.code() == 400) {
-                            return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
+                            return new ResponseEntity<>(Result.error("Model is not accessible"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getCoCoToken(apiKey);
                             if (token == null) {
@@ -1011,7 +1067,7 @@ public class ChatController {
         // 异步处理
         CompletableFuture<ResponseEntity<Object>> future = CompletableFuture.supplyAsync(() -> {
             try {
-                String[] result = extractApiKeyAndRequestUrl(authorizationHeader, conversation);
+                String[] result = extractEmbApiKeyAndRequestUrl(authorizationHeader, conversation);
                 String requestUrl = result[0];
                 String apiKey = result[1];
                 if (!selfTokenList.containsKey(apiKey)) {
@@ -1040,7 +1096,7 @@ public class ChatController {
                         if (resp.code() == 429) {
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else if (resp.code() == 400) {
-                            return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
+                            return new ResponseEntity<>(Result.error("Model is not accessible"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getSelfToken(apiKey, requestUrl);
                             if (token == null) {
@@ -1217,9 +1273,9 @@ public class ChatController {
      * @param resp
      * @param conversation
      */
-    private void outPutChat(HttpServletResponse response, Response resp, Conversation conversation, String model) {
+    private void outPutChat(HttpServletResponse response, Response resp, ChatCompletion conversation, String model) {
         try {
-            boolean isStream = (conversation.getStream() != null) ? conversation.getStream() : false;
+            boolean isStream = conversation.isStream();
             int sleep_time = calculateSleepTime(model, isStream);
             if (isStream) {
                 response.setContentType("text/event-stream; charset=UTF-8");
