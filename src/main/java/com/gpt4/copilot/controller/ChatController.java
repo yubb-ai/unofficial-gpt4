@@ -1326,11 +1326,12 @@ public class ChatController {
                     }
                 }
             }
-            log.info("使用模型：" + model + "，补全tokens：" + tokens + "，vscode_version：" + systemSetting.getVscode_version() +
-                    "，copilot_chat_version：" + systemSetting.getCopilot_chat_version() + "，响应：" + resp);
             if (tokens <= 0) {
+                log.error("补全token为:" + tokens + ", A error occur......");
                 return new ResponseEntity<>(Result.error("HUm... A error occur......"), HttpStatus.INTERNAL_SERVER_ERROR);
             }
+            log.info("使用模型：" + model + "，补全tokens：" + tokens + "，vscode_version：" + systemSetting.getVscode_version() +
+                    "，copilot_chat_version：" + systemSetting.getCopilot_chat_version() + "，响应：" + resp);
             return null;
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -1373,13 +1374,13 @@ public class ChatController {
                     }
                 }
             }
-
+            if (tokens <= 0) {
+                log.error("补全token为:" + tokens + ", A error occur......");
+                return new ResponseEntity<>(Result.error("HUm... A error occur......"), HttpStatus.INTERNAL_SERVER_ERROR);
+            }
             log.info("使用模型：" + model + "，补全tokens：" + tokens + "，vscode_version：" + systemSetting.getVscode_version() +
                     "，copilot_chat_version：" + systemSetting.getCopilot_chat_version()
                     + "，字符间隔时间：" + sleep_time + "ms，响应：" + resp);
-            if (tokens <= 0) {
-                return new ResponseEntity<>(Result.error("HUm... A error occur......"), HttpStatus.INTERNAL_SERVER_ERROR);
-            }
             return null;
         } catch (IOException e) {
             throw new RuntimeException(e);
