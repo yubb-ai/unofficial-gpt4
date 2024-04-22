@@ -7,6 +7,7 @@ import com.alibaba.fastjson2.JSONException;
 import com.alibaba.fastjson2.JSONObject;
 import com.gpt4.copilot.controller.ChatController;
 import com.gpt4.copilot.pojo.SystemSetting;
+import com.unfbx.chatgpt.utils.TikTokensUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -256,6 +257,7 @@ public class copilotApplication {
     @Scheduled(cron = "0 0 3 1/3 * ?")
     private static void updateLatestVersion() {
         try {
+            new TikTokensUtil();
             String latestVersion = getLatestVSCodeVersion();
             String latestChatVersion = getLatestExtensionVersion("GitHub", "copilot-chat");
             if (latestVersion != null && latestChatVersion != null) {
@@ -296,14 +298,10 @@ public class copilotApplication {
         System.out.println("one_selfCopilot_limit：" + ChatController.getSystemSetting().getOne_selfCopilot_limit());
         System.out.println("gpt4-copilot-java 初始化接口成功！");
         System.out.println("======================================================");
-        System.out.println("******原神gpt4-copilot-java-native v0.2.1启动成功******");
-        System.out.println("* 对chat接口的模型进行重定向，减少潜在的风险");
-        System.out.println("* 使用ConcurrentHashMap，粗略的对于每个密钥按每分钟进行限速");
-        System.out.println("* 新增环境变量用于对gpt-4*等模型进行系统prompt提示");
-        System.out.println("* 新增url|apikey形式传入/self/*接口，用于自定义地址和密钥");
-        System.out.println("* 新增对于消息报错提醒，减少对于用户的困扰");
+        System.out.println("******原神gpt4-copilot-java v0.2.2启动成功******");
+        System.out.println("* 由于本人略菜,graalvm依赖问题无法解决,之后代码将只通过jar和docker的形式运行");
         System.out.println("* 修复部分bug，优化读取config.json代码，提升稳定性");
-        System.out.println("* 新增每个密钥对于特定的机器码，且保存在文件中，一秘钥一机器码，减小被查询异常");
+        System.out.println("* 新增token计算,优化报错,支持one_api重试机制");
         System.out.println("URL地址：http://0.0.0.0:" + config.getServerPort() + config.getPrefix() + "");
         System.out.println("======================================================");
     }

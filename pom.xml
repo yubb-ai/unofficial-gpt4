@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.gpt4.copilot</groupId>
     <artifactId>gpt-4-copilot</artifactId>
-    <version>0.2.1</version>
+    <version>0.2.2</version>
     <name>native</name>
     <description>Demo project for Spring Boot with GraalVM Native Image</description>
     <properties>
@@ -53,6 +53,11 @@
             <groupId>com.unfbx</groupId>
             <artifactId>chatgpt-java</artifactId>
             <version>1.1.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.knuddels</groupId>
+            <artifactId>jtokkit</artifactId>
+            <version>0.6.1</version>
         </dependency>
     </dependencies>
 
