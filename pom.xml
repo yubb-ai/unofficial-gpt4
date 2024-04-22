@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.gpt4.copilot</groupId>
     <artifactId>gpt-4-copilot</artifactId>
-    <version>0.2.2</version>
+    <version>0.2.3</version>
     <name>native</name>
     <description>Demo project for Spring Boot with GraalVM Native Image</description>
     <properties>

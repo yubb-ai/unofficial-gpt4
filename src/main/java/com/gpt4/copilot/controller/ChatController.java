@@ -519,6 +519,7 @@ public class ChatController {
                                 log.info("token过期，Github CopilotToken重置化成功！");
                                 return againConversation(response, conversation, token, apiKey, model);
                             } else {
+                                log.info("接口返回" + resp.code() + ",已500返回报错提醒...............");
                                 return new ResponseEntity<>(Result.error("HUm... A error occur......"), HttpStatus.INTERNAL_SERVER_ERROR);
                             }
                         }
@@ -624,13 +625,18 @@ public class ChatController {
                         } else if (resp.code() == 400) {
                             return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
-                            String token = getCoCoToken(apiKey);
-                            if (token == null) {
-                                return new ResponseEntity<>(Result.error("cocopilot APIKey is wrong"), HttpStatus.UNAUTHORIZED);
+                            if (resp.code() == 403) {
+                                String token = getCoCoToken(apiKey);
+                                if (token == null) {
+                                    return new ResponseEntity<>(Result.error("cocopilot APIKey is wrong"), HttpStatus.UNAUTHORIZED);
+                                }
+                                coCopilotTokenList.put(apiKey, token);
+                                log.info("token过期，coCopilotToken重置化成功！");
+                                return againConversation(response, conversation, token, apiKey, model);
+                            } else {
+                                log.info("接口返回" + resp.code() + "已500返回报错提醒...............");
+                                return new ResponseEntity<>(Result.error("HUm... A error occur......"), HttpStatus.INTERNAL_SERVER_ERROR);
                             }
-                            coCopilotTokenList.put(apiKey, token);
-                            log.info("token过期，coCopilotToken重置化成功！");
-                            return againConversation(response, conversation, token, apiKey, model);
                         }
                     } else {
                         // 流式和非流式输出
@@ -787,13 +793,18 @@ public class ChatController {
                         } else if (resp.code() == 400) {
                             return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
-                            String token = getSelfToken(apiKey, requestUrl);
-                            if (token == null) {
-                                return new ResponseEntity<>(Result.error("自定义self APIKey is wrong"), HttpStatus.UNAUTHORIZED);
+                            if (resp.code() == 403) {
+                                String token = getSelfToken(apiKey, requestUrl);
+                                if (token == null) {
+                                    return new ResponseEntity<>(Result.error("自定义self APIKey is wrong"), HttpStatus.UNAUTHORIZED);
+                                }
+                                selfTokenList.put(apiKey, token);
+                                log.info("token过期，自定义selfToken重置化成功！");
+                                return againConversation(response, conversation, token, apiKey, model);
+                            } else {
+                                log.info("接口返回" + resp.code() + "已500返回报错提醒...............");
+                                return new ResponseEntity<>(Result.error("HUm... A error occur......"), HttpStatus.INTERNAL_SERVER_ERROR);
                             }
-                            selfTokenList.put(apiKey, token);
-                            log.info("token过期，自定义selfToken重置化成功！");
-                            return againConversation(response, conversation, token, apiKey, model);
                         }
                     } else {
                         // 流式和非流式输出
@@ -801,7 +812,7 @@ public class ChatController {
                     }
                 }
             } catch (Exception e) {
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+                return new ResponseEntity<>(Result.error(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }, executor);
 
@@ -829,7 +840,7 @@ public class ChatController {
             Request streamRequest = getPrompt(conversation, model, headersMap);
             try (Response resp = client.newCall(streamRequest).execute()) {
                 if (!resp.isSuccessful()) {
-                    return new ResponseEntity<>("APIKey is wrong!", HttpStatus.UNAUTHORIZED);
+                    return new ResponseEntity<>(Result.error("APIKey is wrong!"), HttpStatus.UNAUTHORIZED);
                 } else {
                     // 流式和非流式输出
                     return outPutChat(response, resp, conversation, model);
@@ -837,7 +848,7 @@ public class ChatController {
             }
         } catch (Exception e) {
             log.info("Exception " + e.getMessage());
-            return new ResponseEntity<>(Result.error("HUm... A error occur......"), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(Result.error("HUm...A error occur......"), HttpStatus.INTERNAL_SERVER_ERROR);
 
         }
     }
@@ -1376,7 +1387,7 @@ public class ChatController {
     }
 
 
-        /**
+    /**
      * chat接口的每个字的睡眠时间
      */
     private int calculateSleepTime(String model, boolean isStream) {
