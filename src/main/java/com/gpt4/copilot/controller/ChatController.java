@@ -425,6 +425,7 @@ public class ChatController {
                         .addHeader("Accept", "*/*").build();
                 try (Response res = client.newCall(request_token).execute()) {
                     if (!res.isSuccessful()) {
+                        log.error("Unsuccessful response: " + res.message());
                         return new ResponseEntity<>(Result.error("Unsuccessful response: " + res.message()), HttpStatus.INTERNAL_SERVER_ERROR);
                     }
                     response.setContentType("application/json; charset=utf-8");
@@ -491,10 +492,12 @@ public class ChatController {
                 } else {
                     int requestNum = copilotTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > systemSetting.getOne_copilot_limit()) {
-                        log.info(apiKey + " requests is " + requestNum + " rate limit exceeded");
+                        log.error("请求密钥：" + apiKey + " requests is " + requestNum + " rate limit exceeded");
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
+                // 检查请求结构体
+                long requestTokens = checkConversation(conversation, apiKey);
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
                 String chat_token = copilotTokenList.get(apiKey);
                 Map<String, String> headersMap = new HashMap<>();
@@ -503,24 +506,26 @@ public class ChatController {
                 String model = modelAdjust(conversation);
                 Request streamRequest = getPrompt(conversation, model, headersMap);
                 try (Response resp = client.newCall(streamRequest).execute()) {
-                    log.info(resp.toString());
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
+                            log.error("请求密钥：" + apiKey + "，响应失败：" + resp);
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else if (resp.code() == 400) {
+                            log.error("请求密钥：" + apiKey + "，响应失败：" + resp);
                             return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getCopilotToken(apiKey);
                             if (token == null) {
+                                log.error("无效请求密钥：" + apiKey + "，请求token响应失败：" + resp);
                                 return new ResponseEntity<>(Result.error("copilot APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                             }
                             copilotTokenList.put(apiKey, token);
                             log.info("token过期，Github CopilotToken重置化成功！");
-                            return againConversation(response, conversation, token, apiKey, model);
+                            return againConversation(response, conversation, token, apiKey, model, requestTokens);
                         }
                     } else {
                         // 流式和非流式输出
-                        return outPutChat(response, resp, conversation, model);
+                        return outPutChat(response, resp, conversation, model, requestTokens, apiKey);
                     }
                 }
             } catch (Exception e) {
@@ -532,7 +537,6 @@ public class ChatController {
     }
 
     private String getRequestApikey(String authorizationHeader, @org.springframework.web.bind.annotation.RequestBody Conversation conversation) {
-        checkConversation(conversation);
         String apiKey;
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             apiKey = authorizationHeader.substring(7);
@@ -602,10 +606,12 @@ public class ChatController {
                 } else {
                     int requestNum = coCopilotTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > systemSetting.getOne_coCopilot_limit()) {
-                        log.info(apiKey + " requests is " + requestNum + " rate limit exceeded");
+                        log.error("请求密钥：" + apiKey + " requests is " + requestNum + " rate limit exceeded");
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
+                // 检查请求结构体
+                long requestTokens = checkConversation(conversation, apiKey);
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
                 String chat_token = coCopilotTokenList.get(apiKey);
                 Map<String, String> headersMap = new HashMap<>();
@@ -616,21 +622,24 @@ public class ChatController {
                 try (Response resp = client.newCall(streamRequest).execute()) {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
+                            log.error("请求密钥：" + apiKey + "，响应失败：" + resp);
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else if (resp.code() == 400) {
+                            log.error("请求密钥：" + apiKey + "，响应失败：" + resp);
                             return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getCoCoToken(apiKey);
                             if (token == null) {
+                                log.error("无效请求密钥：" + apiKey + "，请求token响应失败：" + resp);
                                 return new ResponseEntity<>(Result.error("cocopilot APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                             }
                             coCopilotTokenList.put(apiKey, token);
                             log.info("token过期，coCopilotToken重置化成功！");
-                            return againConversation(response, conversation, token, apiKey, model);
+                            return againConversation(response, conversation, token, apiKey, model, requestTokens);
                         }
                     } else {
                         // 流式和非流式输出
-                        return outPutChat(response, resp, conversation, model);
+                        return outPutChat(response, resp, conversation, model, requestTokens, apiKey);
                     }
                 }
             } catch (Exception e) {
@@ -672,28 +681,47 @@ public class ChatController {
      * @throws IOException
      */
     private String[] extractApiKeyAndRequestUrl(String authorizationHeader, Conversation conversation) throws IllegalArgumentException {
-        checkConversation(conversation);
-        return getApiKeyAndRequestUrl(authorizationHeader);
+        return getApiKeyAndRequestUrl(authorizationHeader, conversation);
     }
 
-    private void checkConversation(Conversation conversation) {
+    private long checkConversation(Conversation conversation, String apiKey) {
         if (conversation == null) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Request body is missing or not in JSON format");
         }
         long tokens = conversation.tokens();
         if (tokens > 32 * 1024) {
-            log.error("本次请求tokens is too long and over 32K: " + tokens);
+            log.error("请求密钥：" + apiKey + "，本次请求tokens is too long and over 32K: " + tokens);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Message is too long and over 32K");
         } else if (tokens <= 0) {
-            log.error("本次请求tokens is none: " + tokens);
+            log.error("请求密钥：" + apiKey + "，本次请求tokens is none: " + tokens);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Message is none");
-        } else {
-            log.info("本次请求tokens: " + tokens);
         }
+        return tokens;
     }
 
     @NotNull
-    private String[] getApiKeyAndRequestUrl(String authorizationHeader) {
+    private String[] getApiKeyAndRequestUrl(String authorizationHeader, Conversation conversation) {
+        String apiKey = null;
+        String requestUrl = null;
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            String keyAndUrl = authorizationHeader.substring(7);
+            if (!keyAndUrl.contains("|")) {
+                apiKey = keyAndUrl;
+                ;
+            } else {
+                String[] parts = keyAndUrl.split("\\|");
+                requestUrl = parts[0];
+                apiKey = parts[1];
+            }
+        }
+        if (apiKey == null) {
+            throw new IllegalArgumentException("Authorization ApiKey is missing");
+        }
+        return new String[]{requestUrl, apiKey};
+    }
+
+    @NotNull
+    private String[] getEmbApiKeyAndRequestUrl(String authorizationHeader) {
         String apiKey = null;
         String requestUrl = null;
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
@@ -725,7 +753,7 @@ public class ChatController {
         if (conversation == null) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Request body is missing or not in JSON format");
         }
-        return getApiKeyAndRequestUrl(authorizationHeader);
+        return getEmbApiKeyAndRequestUrl(authorizationHeader);
     }
 
     /**
@@ -764,10 +792,12 @@ public class ChatController {
                 } else {
                     int requestNum = selfTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > systemSetting.getOne_selfCopilot_limit()) {
-                        log.info(apiKey + " requests is " + requestNum + " rate limit exceeded");
+                        log.error("请求密钥：" + apiKey + " requests is " + requestNum + " rate limit exceeded");
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
+                // 检查请求结构体
+                long requestTokens = checkConversation(conversation, apiKey);
                 // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
                 String chat_token = selfTokenList.get(apiKey);
                 Map<String, String> headersMap = new HashMap<>();
@@ -776,24 +806,26 @@ public class ChatController {
                 String model = modelAdjust(conversation);
                 Request streamRequest = getPrompt(conversation, model, headersMap);
                 try (Response resp = client.newCall(streamRequest).execute()) {
-                    log.info("response code: " + resp.body());
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
+                            log.error("请求密钥：" + apiKey + "，响应失败：" + resp);
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else if (resp.code() == 400) {
+                            log.error("请求密钥：" + apiKey + "，响应失败：" + resp);
                             return new ResponseEntity<>(Result.error("messages is none or too long and over 32K"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getSelfToken(apiKey, requestUrl);
                             if (token == null) {
+                                log.error("无效请求密钥：" + apiKey + "，请求token响应失败：" + resp);
                                 return new ResponseEntity<>(Result.error("自定义self APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                             }
                             selfTokenList.put(apiKey, token);
                             log.info("token过期，自定义selfToken重置化成功！");
-                            return againConversation(response, conversation, token, apiKey, model);
+                            return againConversation(response, conversation, token, apiKey, model, requestTokens);
                         }
                     } else {
                         // 流式和非流式输出
-                        return outPutChat(response, resp, conversation, model);
+                        return outPutChat(response, resp, conversation, model, requestTokens, apiKey);
                     }
                 }
             } catch (Exception e) {
@@ -817,7 +849,8 @@ public class ChatController {
                                                     @org.springframework.web.bind.annotation.RequestBody Conversation conversation,
                                                     String token,
                                                     String apiKey,
-                                                    String model) {
+                                                    String model,
+                                                    long requestTokens) {
         try {
             Map<String, String> headersMap = new HashMap<>();
             //添加头部
@@ -825,14 +858,15 @@ public class ChatController {
             Request streamRequest = getPrompt(conversation, model, headersMap);
             try (Response resp = client.newCall(streamRequest).execute()) {
                 if (!resp.isSuccessful()) {
+                    log.error("无效密钥：" + apiKey + "第二次尝试失败：" + resp);
                     return new ResponseEntity<>(Result.error("Please check your APIKey !"), HttpStatus.UNAUTHORIZED);
                 } else {
                     // 流式和非流式输出
-                    return outPutChat(response, resp, conversation, model);
+                    return outPutChat(response, resp, conversation, model, requestTokens, apiKey);
                 }
             }
         } catch (Exception e) {
-            log.info("Exception " + e.getMessage());
+            log.error("HUm...A error occur:" + e.getMessage());
             return new ResponseEntity<>(Result.error("HUm...A error occur......"), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -842,7 +876,6 @@ public class ChatController {
             if (model.startsWith("gpt-4") && systemSetting.getGpt4_prompt()) {
                 Message newMessage = getStringStringMap(model);
                 conversation.getMessages().add(0, newMessage);
-                log.info(model + "模型，添加系统消息注入！");
             }
             String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
             RequestBody requestBody = RequestBody.create(json, JSON);
@@ -905,7 +938,7 @@ public class ChatController {
                 } else {
                     int requestNum = copilotTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > systemSetting.getOne_copilot_limit()) {
-                        log.info(apiKey + " requests is " + requestNum + " rate limit exceeded");
+                        log.error("请求密钥：" + apiKey + " requests is " + requestNum + " rate limit exceeded");
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
@@ -918,12 +951,15 @@ public class ChatController {
                 try (Response resp = client.newCall(streamRequest).execute()) {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
+                            log.error("请求密钥：" + apiKey + "，响应失败：" + resp);
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else if (resp.code() == 400) {
+                            log.error("请求密钥：" + apiKey + "，响应失败：" + resp);
                             return new ResponseEntity<>(Result.error("Model is not accessible"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getCopilotToken(apiKey);
                             if (token == null) {
+                                log.error("无效请求密钥：" + apiKey + "，请求token响应失败：" + resp);
                                 return new ResponseEntity<>(Result.error("Github Copilot APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                             }
                             copilotTokenList.put(apiKey, token);
@@ -995,11 +1031,11 @@ public class ChatController {
                 } else {
                     int requestNum = coCopilotTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > systemSetting.getOne_coCopilot_limit()) {
-                        log.info(apiKey + " requests is " + requestNum + " rate limit exceeded");
+                        log.error("请求密钥：" + apiKey + " requests is " + requestNum + " rate limit exceeded");
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
-                // 创建OkHttpClient请求 请求https://api.githubcopilot.com/chat/completions
+                // 创建OkHttpClient请求 请求https://api.githubcopilot.com/embeddings
                 String chat_token = coCopilotTokenList.get(apiKey);
                 Map<String, String> headersMap = new HashMap<>();
                 //添加头部
@@ -1008,12 +1044,15 @@ public class ChatController {
                 try (Response resp = client.newCall(streamRequest).execute()) {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
+                            log.error("请求密钥：" + apiKey + "，响应失败：" + resp);
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else if (resp.code() == 400) {
+                            log.error("请求密钥：" + apiKey + "，响应失败：" + resp);
                             return new ResponseEntity<>(Result.error("Model is not accessible"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getCoCoToken(apiKey);
                             if (token == null) {
+                                log.error("无效请求密钥：" + apiKey + "，请求token响应失败：" + resp);
                                 return new ResponseEntity<>(Result.error("copilot APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                             }
                             coCopilotTokenList.put(apiKey, token);
@@ -1072,7 +1111,7 @@ public class ChatController {
                 } else {
                     int requestNum = selfTokenLimitList.get(apiKey).incrementAndGet();
                     if (requestNum > systemSetting.getOne_selfCopilot_limit()) {
-                        log.info(apiKey + " requests is " + requestNum + " rate limit exceeded");
+                        log.error("请求密钥：" + apiKey + " requests is " + requestNum + " rate limit exceeded");
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
@@ -1084,12 +1123,15 @@ public class ChatController {
                 try (Response resp = client.newCall(streamRequest).execute()) {
                     if (!resp.isSuccessful()) {
                         if (resp.code() == 429) {
+                            log.error("请求密钥：" + apiKey + "，响应失败：" + resp);
                             return new ResponseEntity<>(Result.error("rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                         } else if (resp.code() == 400) {
+                            log.error("请求密钥：" + apiKey + "，响应失败：" + resp);
                             return new ResponseEntity<>(Result.error("Model is not accessible"), HttpStatus.INTERNAL_SERVER_ERROR);
                         } else {
                             String token = getSelfToken(apiKey, requestUrl);
                             if (token == null) {
+                                log.error("无效请求密钥：" + apiKey + "，请求token响应失败：" + resp);
                                 return new ResponseEntity<>(Result.error("自定义 APIKey is wrong"), HttpStatus.UNAUTHORIZED);
                             }
                             selfTokenList.put(apiKey, token);
@@ -1124,7 +1166,8 @@ public class ChatController {
             Request streamRequest = requestBuilder.build();
             try (Response resp = client.newCall(streamRequest).execute()) {
                 if (!resp.isSuccessful()) {
-                    return new ResponseEntity<>(Result.error("copilot/cocopilot/自定义 APIKey is wrong Or your network is wrong"), HttpStatus.UNAUTHORIZED);
+                    log.error("无效密钥：" + apiKey + "第二次尝试失败：" + resp);
+                    return new ResponseEntity<>(Result.error("APIKey is wrong Or your network is wrong"), HttpStatus.UNAUTHORIZED);
                 } else {
                     // 非流式输出
                     outPutEmbeddings(response, resp);
@@ -1151,13 +1194,13 @@ public class ChatController {
                 .addHeader("Editor-Plugin-Version", "copilot-chat/" + systemSetting.getCopilot_chat_version())
                 .addHeader("User-Agent", "GitHubCopilotChat/" + systemSetting.getCopilot_chat_version())
                 .addHeader("Accept", "*/*").build();
-        return getToken(request);
+        return getToken(request, apiKey);
     }
 
-    private String getToken(Request request) throws IOException {
+    private String getToken(Request request, String apiKey) throws IOException {
         try (Response response = client.newCall(request).execute()) {
-            log.info(response.toString());
             if (!response.isSuccessful()) {
+                log.error("请求密钥：" + apiKey + "，请求获取token出现问题：" + response);
                 return null;
             }
             String responseBody = response.body().string();
@@ -1182,7 +1225,7 @@ public class ChatController {
                 .addHeader("Editor-Plugin-Version", "copilot-chat/" + systemSetting.getCopilot_chat_version())
                 .addHeader("User-Agent", "GitHubCopilotChat/" + systemSetting.getCopilot_chat_version())
                 .addHeader("Accept", "*/*").build();
-        return getToken(request);
+        return getToken(request, apiKey);
     }
 
     /**
@@ -1201,7 +1244,7 @@ public class ChatController {
                 .addHeader("Editor-Plugin-Version", "copilot-chat/" + systemSetting.getCopilot_chat_version())
                 .addHeader("User-Agent", "GitHubCopilotChat/" + systemSetting.getCopilot_chat_version())
                 .addHeader("Accept", "*/*").build();
-        return getToken(request);
+        return getToken(request, apiKey);
     }
 
     /**
@@ -1262,14 +1305,20 @@ public class ChatController {
      * @param resp
      * @param conversation
      */
-    private ResponseEntity<Object> outPutChat(HttpServletResponse response, Response resp, Conversation conversation, String model) {
+    private ResponseEntity<Object> outPutChat(HttpServletResponse response,
+                                              Response resp,
+                                              Conversation conversation,
+                                              String model,
+                                              long requestTokens,
+                                              String apiKey) {
         boolean isStream = conversation.isStream();
         int sleep_time = calculateSleepTime(model, isStream);
         if (isStream) {
-            return outIsStreamPutChat(response, resp, model, sleep_time);
+            response.setContentType("text/event-stream; charset=UTF-8");
+            return outIsStreamPutChat(response, resp, model, sleep_time, requestTokens, apiKey);
         } else {
             response.setContentType("application/json; charset=utf-8");
-            return outNoStreamPutChat(response, resp, model);
+            return outNoStreamPutChat(response, resp, model, requestTokens, apiKey);
         }
     }
 
@@ -1281,7 +1330,11 @@ public class ChatController {
      * @param model
      * @return
      */
-    private ResponseEntity<Object> outNoStreamPutChat(HttpServletResponse response, Response resp, String model) {
+    private ResponseEntity<Object> outNoStreamPutChat(HttpServletResponse response,
+                                                      Response resp,
+                                                      String model,
+                                                      long requestTokens,
+                                                      String apiKey) {
         try (PrintWriter out = new PrintWriter(new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8), true);
              BufferedReader in = new BufferedReader(new InputStreamReader(resp.body().byteStream(), StandardCharsets.UTF_8))) {
 
@@ -1313,7 +1366,7 @@ public class ChatController {
                 log.error("补全token为:" + tokens + ", A error occur......");
                 return new ResponseEntity<>(Result.error("HUm... A error occur......"), HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            log.info("使用模型：" + model + "，补全tokens：" + tokens + "，vscode_version：" + systemSetting.getVscode_version() +
+            log.info("请求密钥：" + apiKey + "，是否流式：false，使用模型：" + model + "，请求tokens：" + requestTokens + "，补全tokens：" + tokens + "，vscode_version：" + systemSetting.getVscode_version() +
                     "，copilot_chat_version：" + systemSetting.getCopilot_chat_version() + "，响应：" + resp);
             return null;
         } catch (IOException e) {
@@ -1330,13 +1383,18 @@ public class ChatController {
      * @param sleep_time
      * @return
      */
-    private ResponseEntity<Object> outIsStreamPutChat(HttpServletResponse response, Response resp, String model, int sleep_time) {
+    private ResponseEntity<Object> outIsStreamPutChat(HttpServletResponse response,
+                                                      Response resp,
+                                                      String model,
+                                                      int sleep_time,
+                                                      long requestTokens,
+                                                      String apiKey) {
+        String temModel = model == null || !model.startsWith("gpt-4") ? "gpt-3.5-turbo-0613" : "gpt-4-0613";
         try (PrintWriter out = new PrintWriter(new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8), true);
              BufferedReader in = new BufferedReader(new InputStreamReader(resp.body().byteStream(), StandardCharsets.UTF_8))) {
             String line;
             long tokens = 0;
-            response.setContentType("text/event-stream; charset=UTF-8");
-            if(in.toString().length() < 0){
+            if (in.toString().length() < 0) {
                 response.setContentType("application/json; charset=utf-8");
                 log.error("补全token为:" + tokens + ", A error occur......");
                 return new ResponseEntity<>(Result.error("HUm... A error occur......"), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -1353,7 +1411,7 @@ public class ChatController {
                             if (choicesArray.size() > 0) {
                                 JSONObject firstChoice = choicesArray.getJSONObject(0);
                                 String content = firstChoice.getJSONObject("delta").getString("content");
-                                tokens += TikTokensUtil.tokens("gpt-3.5-turbo", content);
+                                tokens += TikTokensUtil.tokens(temModel, content);
                             }
                             if (sleep_time > 0) {
                                 Thread.sleep(sleep_time);
@@ -1364,7 +1422,7 @@ public class ChatController {
                     }
                 }
             }
-            log.info("使用模型：" + model + "，补全tokens：" + tokens + "，vscode_version：" + systemSetting.getVscode_version() +
+            log.info("请求密钥：" + apiKey + "，是否流式：true，使用模型：" + model + "，请求tokens：" + requestTokens + "，补全tokens：" + tokens + "，vscode_version：" + systemSetting.getVscode_version() +
                     "，copilot_chat_version：" + systemSetting.getCopilot_chat_version()
                     + "，字符间隔时间：" + sleep_time + "ms，响应：" + resp);
             return null;
@@ -1419,7 +1477,7 @@ public class ChatController {
         try {
             if (machineIdList.containsKey(apiKey)) {
                 String machineId = machineIdList.get(apiKey);
-                log.info("机械码读取成功！对应的机械码为：" + machineId);
+//                log.info("机械码读取成功！对应的机械码为：" + machineId);
                 return machineId;
             }
             String machineId = generateMachineId();

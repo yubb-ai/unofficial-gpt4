@@ -298,10 +298,11 @@ public class copilotApplication {
         System.out.println("one_selfCopilot_limit：" + ChatController.getSystemSetting().getOne_selfCopilot_limit());
         System.out.println("gpt4-copilot-java 初始化接口成功！");
         System.out.println("======================================================");
-        System.out.println("******原神gpt4-copilot-java v0.2.3启动成功******");
+        System.out.println("******原神gpt4-copilot-java v0.2.4启动成功******");
         System.out.println("* 由于本人略菜,graalvm依赖问题无法解决,之后代码将只通过jar和docker的形式运行");
         System.out.println("* 修复部分bug，优化读取config.json代码，提升稳定性");
         System.out.println("* 新增token计算,优化报错,支持one_api重试机制");
+        System.out.println("* 优化部分报错日志，提高日志可读性");
         System.out.println("URL地址：http://0.0.0.0:" + config.getServerPort() + config.getPrefix() + "");
         System.out.println("======================================================");
     }

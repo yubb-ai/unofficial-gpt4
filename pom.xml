@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.gpt4.copilot</groupId>
     <artifactId>gpt-4-copilot</artifactId>
-    <version>0.2.3</version>
+    <version>0.2.4</version>
     <name>native</name>
     <description>Demo project for Spring Boot with GraalVM Native Image</description>
     <properties>
@@ -43,21 +43,11 @@
             <artifactId>fastjson</artifactId>
             <version>2.0.32</version>
         </dependency>
-        <!--        okhttp依赖-->
-        <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
-        </dependency>
         <!--        统计token-->
         <dependency>
             <groupId>com.unfbx</groupId>
             <artifactId>chatgpt-java</artifactId>
             <version>1.1.5</version>
-        </dependency>
-        <dependency>
-            <groupId>com.knuddels</groupId>
-            <artifactId>jtokkit</artifactId>
-            <version>0.6.1</version>
         </dependency>
     </dependencies>
 

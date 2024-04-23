@@ -30,6 +30,29 @@ public class Conversation implements Serializable {
     private static final Map<String, Encoding> modelMap = new HashMap();
     private static final EncodingRegistry registry = Encodings.newDefaultEncodingRegistry();
 
+    static {
+        ModelType[] var0 = ModelType.values();
+        int var1 = var0.length;
+
+        for (int var2 = 0; var2 < var1; ++var2) {
+            ModelType modelType = var0[var2];
+            modelMap.put(modelType.getName(), registry.getEncodingForModel(modelType));
+        }
+
+        modelMap.put(BaseChatCompletion.Model.GPT_3_5_TURBO_0301.getName(), registry.getEncodingForModel(ModelType.GPT_3_5_TURBO));
+        modelMap.put(BaseChatCompletion.Model.GPT_3_5_TURBO_0613.getName(), registry.getEncodingForModel(ModelType.GPT_3_5_TURBO));
+        modelMap.put(BaseChatCompletion.Model.GPT_3_5_TURBO_16K.getName(), registry.getEncodingForModel(ModelType.GPT_3_5_TURBO));
+        modelMap.put(BaseChatCompletion.Model.GPT_3_5_TURBO_16K_0613.getName(), registry.getEncodingForModel(ModelType.GPT_3_5_TURBO));
+        modelMap.put(BaseChatCompletion.Model.GPT_3_5_TURBO_1106.getName(), registry.getEncodingForModel(ModelType.GPT_3_5_TURBO));
+        modelMap.put(BaseChatCompletion.Model.GPT_4_32K.getName(), registry.getEncodingForModel(ModelType.GPT_4));
+        modelMap.put(BaseChatCompletion.Model.GPT_4_32K_0314.getName(), registry.getEncodingForModel(ModelType.GPT_4));
+        modelMap.put(BaseChatCompletion.Model.GPT_4_0314.getName(), registry.getEncodingForModel(ModelType.GPT_4));
+        modelMap.put(BaseChatCompletion.Model.GPT_4_0613.getName(), registry.getEncodingForModel(ModelType.GPT_4));
+        modelMap.put(BaseChatCompletion.Model.GPT_4_32K_0613.getName(), registry.getEncodingForModel(ModelType.GPT_4));
+        modelMap.put(BaseChatCompletion.Model.GPT_4_1106_PREVIEW.getName(), registry.getEncodingForModel(ModelType.GPT_4));
+        modelMap.put(BaseChatCompletion.Model.GPT_4_VISION_PREVIEW.getName(), registry.getEncodingForModel(ModelType.GPT_4));
+    }
+
     /**
      * 是否流式输出.
      * default:false
@@ -38,25 +61,11 @@ public class Conversation implements Serializable {
      */
     @Builder.Default
     private boolean stream = false;
-
     /**
      * 问题描述
      */
     @NonNull
     private List<Message> messages;
-
-    /**
-     * 获取当前参数的tokens数
-     */
-    public long tokens() {
-        if (CollectionUtil.isEmpty(this.messages) || StrUtil.isBlank(this.getModel())) {
-            log.warn("参数异常model：{}，prompt：{}", this.getModel(), this.messages);
-            return 0;
-        }
-        String temModel = this.getModel() == null || !model.startsWith("gpt-4") ? "gpt-3.5-turbo" :"gpt-4-0613";
-        return tokens(temModel, this.messages);
-    }
-
     @Builder.Default
     private String model = "gpt-3.5-turbo";
 
@@ -100,8 +109,8 @@ public class Conversation implements Serializable {
         int sum = 0;
         Iterator var6 = messages.iterator();
 
-        while(var6.hasNext()) {
-            Message msg = (Message)var6.next();
+        while (var6.hasNext()) {
+            Message msg = (Message) var6.next();
             sum += tokensPerMessage;
             sum += tokens(encoding, msg.getContent());
             sum += tokens(encoding, msg.getRole());
@@ -115,27 +124,15 @@ public class Conversation implements Serializable {
         return sum;
     }
 
-
-    static {
-        ModelType[] var0 = ModelType.values();
-        int var1 = var0.length;
-
-        for(int var2 = 0; var2 < var1; ++var2) {
-            ModelType modelType = var0[var2];
-            modelMap.put(modelType.getName(), registry.getEncodingForModel(modelType));
+    /**
+     * 获取当前参数的tokens数
+     */
+    public long tokens() {
+        if (CollectionUtil.isEmpty(this.messages) || StrUtil.isBlank(this.getModel())) {
+            log.warn("参数异常model：{}，prompt：{}", this.getModel(), this.messages);
+            return 0;
         }
-
-        modelMap.put(BaseChatCompletion.Model.GPT_3_5_TURBO_0301.getName(), registry.getEncodingForModel(ModelType.GPT_3_5_TURBO));
-        modelMap.put(BaseChatCompletion.Model.GPT_3_5_TURBO_0613.getName(), registry.getEncodingForModel(ModelType.GPT_3_5_TURBO));
-        modelMap.put(BaseChatCompletion.Model.GPT_3_5_TURBO_16K.getName(), registry.getEncodingForModel(ModelType.GPT_3_5_TURBO));
-        modelMap.put(BaseChatCompletion.Model.GPT_3_5_TURBO_16K_0613.getName(), registry.getEncodingForModel(ModelType.GPT_3_5_TURBO));
-        modelMap.put(BaseChatCompletion.Model.GPT_3_5_TURBO_1106.getName(), registry.getEncodingForModel(ModelType.GPT_3_5_TURBO));
-        modelMap.put(BaseChatCompletion.Model.GPT_4_32K.getName(), registry.getEncodingForModel(ModelType.GPT_4));
-        modelMap.put(BaseChatCompletion.Model.GPT_4_32K_0314.getName(), registry.getEncodingForModel(ModelType.GPT_4));
-        modelMap.put(BaseChatCompletion.Model.GPT_4_0314.getName(), registry.getEncodingForModel(ModelType.GPT_4));
-        modelMap.put(BaseChatCompletion.Model.GPT_4_0613.getName(), registry.getEncodingForModel(ModelType.GPT_4));
-        modelMap.put(BaseChatCompletion.Model.GPT_4_32K_0613.getName(), registry.getEncodingForModel(ModelType.GPT_4));
-        modelMap.put(BaseChatCompletion.Model.GPT_4_1106_PREVIEW.getName(), registry.getEncodingForModel(ModelType.GPT_4));
-        modelMap.put(BaseChatCompletion.Model.GPT_4_VISION_PREVIEW.getName(), registry.getEncodingForModel(ModelType.GPT_4));
+        String temModel = this.getModel() == null || !model.startsWith("gpt-4") ? "gpt-3.5-turbo-0613" : "gpt-4-0613";
+        return tokens(temModel, this.messages);
     }
 }

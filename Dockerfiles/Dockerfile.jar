@@ -7,8 +7,12 @@ LABEL maintainer="Yanyutin753"
 # 切换到 root 用户
 USER root
 
+# 设置系统时区为Asia/Shanghai（北京时间）
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # 复制JAR文件到容器的/app目录下
-COPY /target/gpt-4-copilot-0.2.3.jar app.jar
+COPY /target/gpt-4-copilot-0.2.4.jar app.jar
 
 # 声明服务运行在8081端口
 EXPOSE 8081
