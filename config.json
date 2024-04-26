@@ -2,7 +2,7 @@
 	"password":"920052ec-14fc-4215-974d-d6fd3c89dd91",
 	"gpt4_prompt":true,
 	"gpt3_sleepTime":0,
-	"gpt4_sleepTime":100,
+	"gpt4_sleepTime":80,
 	"maxPoolSize":300,
 	"vscode_version":"1.88.0",
 	"copilot_chat_version":"0.15.2024041001",

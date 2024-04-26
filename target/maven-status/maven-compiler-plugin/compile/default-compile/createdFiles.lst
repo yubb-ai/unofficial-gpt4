@@ -1,12 +1,15 @@
 com\gpt4\copilot\controller\ChatController.class
 com\gpt4\copilot\config\CorsConfig.class
 com\gpt4\copilot\pojo\Conversation$ConversationBuilderImpl.class
+com\gpt4\copilot\pojo\streamResponse.class
 com\gpt4\copilot\copilotApplication.class
+com\gpt4\copilot\pojo\streamResponse$Delta.class
 com\gpt4\copilot\controller\ChatController$1.class
 com\gpt4\copilot\pojo\Conversation$ConversationBuilder.class
 com\gpt4\copilot\config\WebConfig.class
 com\gpt4\copilot\controller\CustomErrorController.class
 com\gpt4\copilot\pojo\Conversation.class
+com\gpt4\copilot\pojo\streamResponse$Choice.class
 com\gpt4\copilot\pojo\SystemSetting.class
 com\gpt4\copilot\pojo\Result.class
 com\gpt4\copilot\controller\ChatController$2.class

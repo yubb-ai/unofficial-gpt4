@@ -11,6 +11,7 @@ import com.gpt4.copilot.copilotApplication;
 import com.gpt4.copilot.pojo.Conversation;
 import com.gpt4.copilot.pojo.Result;
 import com.gpt4.copilot.pojo.SystemSetting;
+import com.gpt4.copilot.pojo.streamResponse;
 import com.unfbx.chatgpt.entity.chat.Message;
 import com.unfbx.chatgpt.utils.TikTokensUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -707,7 +708,6 @@ public class ChatController {
             String keyAndUrl = authorizationHeader.substring(7);
             if (!keyAndUrl.contains("|")) {
                 apiKey = keyAndUrl;
-                ;
             } else {
                 String[] parts = keyAndUrl.split("\\|");
                 requestUrl = parts[0];
@@ -728,7 +728,6 @@ public class ChatController {
             String keyAndUrl = authorizationHeader.substring(7);
             if (!keyAndUrl.contains("|")) {
                 apiKey = keyAndUrl;
-                ;
             } else {
                 String[] parts = keyAndUrl.split("\\|");
                 requestUrl = parts[0];
@@ -1389,10 +1388,12 @@ public class ChatController {
                                                       int sleep_time,
                                                       long requestTokens,
                                                       String apiKey) {
+//      // 用于计算token的临时模型
         String temModel = model == null || !model.startsWith("gpt-4") ? "gpt-3.5-turbo-0613" : "gpt-4-0613";
         try (PrintWriter out = new PrintWriter(new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8), true);
              BufferedReader in = new BufferedReader(new InputStreamReader(resp.body().byteStream(), StandardCharsets.UTF_8))) {
             String line;
+            String resContent = "";
             long tokens = 0;
             if (in.toString().length() < 0) {
                 response.setContentType("application/json; charset=utf-8");
@@ -1400,33 +1401,47 @@ public class ChatController {
                 return new ResponseEntity<>(Result.error("HUm... A error occur......"), HttpStatus.INTERNAL_SERVER_ERROR);
             }
             while ((line = in.readLine()) != null) {
-                out.println(line);
-                out.flush();
                 if (line.startsWith("data:")) {
                     try {
                         String res_text = line.replace("data: ", "");
                         if (!"[DONE]".equals(res_text.trim())) {
                             JSONObject resJson = com.alibaba.fastjson2.JSON.parseObject(res_text);
                             JSONArray choicesArray = resJson.getJSONArray("choices");
-                            if (choicesArray.size() > 0) {
+                            if (resJson.size() > 0 && choicesArray.size() > 0) {
                                 JSONObject firstChoice = choicesArray.getJSONObject(0);
                                 String content = firstChoice.getJSONObject("delta").getString("content");
-                                tokens += TikTokensUtil.tokens(temModel, content);
+                                if (content == null || content.length() == 0) {
+                                    continue;
+                                }
+                                String chat_message_id = resJson.getString("id");
+                                String timestamp = resJson.getString("created");
+                                streamResponse.Choice choice = new streamResponse.Choice(0, new streamResponse.Delta(content), null);
+                                streamResponse streamResponse = new streamResponse(chat_message_id, "chat.completion.chunk", model, choice, timestamp);
+                                String tmpRes = "data: " + com.alibaba.fastjson.JSONObject.toJSONString(streamResponse) + "\n\n";
+                                out.print(tmpRes);
+                                out.flush();
+                                resContent += content;
+                                if (sleep_time > 0) {
+                                    Thread.sleep(sleep_time);
+                                }
                             }
-                            if (sleep_time > 0) {
-                                Thread.sleep(sleep_time);
-                            }
+                        } else {
+                            out.print(line + "\n\n");
+                            out.flush();
                         }
                     } catch (InterruptedException e) {
+                        log.error(" A error occur......", e);
                         throw new RuntimeException(e);
                     }
                 }
             }
+            tokens += TikTokensUtil.tokens(temModel, resContent);
             log.info("请求密钥：" + apiKey + "，是否流式：true，使用模型：" + model + "，请求tokens：" + requestTokens + "，补全tokens：" + tokens + "，vscode_version：" + systemSetting.getVscode_version() +
                     "，copilot_chat_version：" + systemSetting.getCopilot_chat_version()
-                    + "，字符间隔时间：" + sleep_time + "ms，响应：" + resp);
+                    + "，字符间隔时间：" + sleep_time + "ms，响应内容：" + resContent);
             return null;
         } catch (IOException e) {
+            log.error(" A error occur......", e);
             throw new RuntimeException(e);
         }
     }
