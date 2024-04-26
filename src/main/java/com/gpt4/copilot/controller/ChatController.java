@@ -8,10 +8,7 @@ import com.alibaba.fastjson2.TypeReference;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gpt4.copilot.copilotApplication;
-import com.gpt4.copilot.pojo.Conversation;
-import com.gpt4.copilot.pojo.Result;
-import com.gpt4.copilot.pojo.SystemSetting;
-import com.gpt4.copilot.pojo.streamResponse;
+import com.gpt4.copilot.pojo.*;
 import com.unfbx.chatgpt.entity.chat.Message;
 import com.unfbx.chatgpt.utils.TikTokensUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -886,9 +883,15 @@ public class ChatController {
         }
     }
 
-    private Request getEmdPrompt(Object conversation,
+    private Request getEmdPrompt(Embeddings conversation,
                                  Map<String, String> headersMap) {
         try {
+            Object input = conversation.getInput();
+            if (input instanceof String) {
+                List<String> resInput = new ArrayList<>();
+                resInput.add((String) input);
+                conversation.setInput(resInput);
+            }
             String json = com.alibaba.fastjson2.JSON.toJSONString(conversation);
             RequestBody requestBody = RequestBody.create(json, JSON);
             Request.Builder requestBuilder = new Request.Builder().url(github_embaddings).post(requestBody);
@@ -917,7 +920,7 @@ public class ChatController {
     @PostMapping(value = "/v1/embeddings")
     public ResponseEntity<Object> coPilotEmbeddings(HttpServletResponse response,
                                                     HttpServletRequest request,
-                                                    @org.springframework.web.bind.annotation.RequestBody Object conversation) {
+                                                    @org.springframework.web.bind.annotation.RequestBody Embeddings conversation) {
         String header = request.getHeader("Authorization");
         String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
@@ -1010,7 +1013,7 @@ public class ChatController {
     @PostMapping(value = "/cocopilot/v1/embeddings")
     public ResponseEntity<Object> coCoPilotEmbeddings(HttpServletResponse response,
                                                       HttpServletRequest request,
-                                                      @org.springframework.web.bind.annotation.RequestBody Object conversation) {
+                                                      @org.springframework.web.bind.annotation.RequestBody Embeddings conversation) {
         String header = request.getHeader("Authorization");
         String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
@@ -1033,7 +1036,7 @@ public class ChatController {
                         return new ResponseEntity<>(Result.error("current requests is " + requestNum + " rate limit exceeded"), HttpStatus.TOO_MANY_REQUESTS);
                     }
                 }
-                // 创建OkHttpClient请求 请求https://api.githubcopilot.com/embeddings
+                // 创建OkHttpClient请求 请求https://api.githubcopilot.com/Embeddings
                 String chat_token = coCopilotTokenList.get(apiKey);
                 Map<String, String> headersMap = new HashMap<>();
                 //添加头部
@@ -1088,7 +1091,7 @@ public class ChatController {
     @PostMapping(value = "/self/v1/embeddings")
     public ResponseEntity<Object> selfEmbeddings(HttpServletResponse response,
                                                  HttpServletRequest request,
-                                                 @org.springframework.web.bind.annotation.RequestBody Object conversation) {
+                                                 @org.springframework.web.bind.annotation.RequestBody Embeddings conversation) {
         String header = request.getHeader("Authorization");
         String authorizationHeader = (header != null && !header.trim().isEmpty()) ? header.trim() : null;
         // 异步处理
@@ -1413,8 +1416,8 @@ public class ChatController {
                                     String chat_message_id = resJson.getString("id");
                                     long timestamp = resJson.getLong("created");
                                     // 使用stream形式适应List
-                                    List<streamResponse.Choice> choices = Stream.of(new streamResponse.Choice(0, new streamResponse.Delta(content), null)).collect(Collectors.toList());
-                                    streamResponse streamResponse = new streamResponse(chat_message_id, model, "chat.completion.chunk", choices, timestamp);
+                                    List<StreamResponse.Choice> choices = Stream.of(new StreamResponse.Choice(0, new StreamResponse.Delta(content), null)).collect(Collectors.toList());
+                                    StreamResponse streamResponse = new StreamResponse(chat_message_id, model, "chat.completion.chunk", choices, timestamp);
                                     StringBuilder stringBuilder = new StringBuilder();
                                     stringBuilder.append("data: ");
                                     stringBuilder.append(com.alibaba.fastjson.JSONObject.toJSONString(streamResponse));
