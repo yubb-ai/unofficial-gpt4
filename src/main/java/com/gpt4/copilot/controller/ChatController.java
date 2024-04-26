@@ -1416,7 +1416,7 @@ public class ChatController {
                                 String chat_message_id = resJson.getString("id");
                                 long timestamp = resJson.getLong("created");
                                 streamResponse.Choice choice = new streamResponse.Choice(0, new streamResponse.Delta(content), null);
-                                streamResponse streamResponse = new streamResponse(chat_message_id, "chat.completion.chunk", model, choice, timestamp);
+                                streamResponse streamResponse = new streamResponse(chat_message_id, model,"chat.completion.chunk", choice, timestamp);
                                 String tmpRes = "data: " + com.alibaba.fastjson.JSONObject.toJSONString(streamResponse) + "\n\n";
                                 out.print(tmpRes);
                                 out.flush();

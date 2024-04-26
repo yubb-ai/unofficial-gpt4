@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@JSONType(orders={"id","model","object","choices","created"})
+@JSONType(orders={"id","model","object","choice","created"})
 public class streamResponse {
     private String id;
     private String model;
