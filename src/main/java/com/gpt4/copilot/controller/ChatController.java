@@ -38,12 +38,11 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Yangyang
@@ -1410,26 +1409,31 @@ public class ChatController {
                             if (resJson.size() > 0 && choicesArray.size() > 0) {
                                 JSONObject firstChoice = choicesArray.getJSONObject(0);
                                 String content = firstChoice.getJSONObject("delta").getString("content");
-                                if (content == null || content.length() == 0) {
-                                    continue;
-                                }
-                                String chat_message_id = resJson.getString("id");
-                                long timestamp = resJson.getLong("created");
-                                streamResponse.Choice choice = new streamResponse.Choice(0, new streamResponse.Delta(content), null);
-                                streamResponse streamResponse = new streamResponse(chat_message_id, model,"chat.completion.chunk", choice, timestamp);
-                                String tmpRes = "data: " + com.alibaba.fastjson.JSONObject.toJSONString(streamResponse) + "\n\n";
-                                out.print(tmpRes);
-                                out.flush();
-                                resContent += content;
-                                if (sleep_time > 0) {
-                                    Thread.sleep(sleep_time);
+                                if (content != null && content.length() > 0) {
+                                    String chat_message_id = resJson.getString("id");
+                                    long timestamp = resJson.getLong("created");
+                                    // 使用stream形式适应List
+                                    List<streamResponse.Choice> choices = Stream.of(new streamResponse.Choice(0, new streamResponse.Delta(content), null)).collect(Collectors.toList());
+                                    streamResponse streamResponse = new streamResponse(chat_message_id, model, "chat.completion.chunk", choices, timestamp);
+                                    StringBuilder stringBuilder = new StringBuilder();
+                                    stringBuilder.append("data: ");
+                                    stringBuilder.append(com.alibaba.fastjson.JSONObject.toJSONString(streamResponse));
+                                    stringBuilder.append("\n\n");
+                                    String tmpRes = stringBuilder.toString();
+
+                                    out.print(tmpRes);
+                                    out.flush();
+                                    resContent += content;
+                                    if (sleep_time > 0) {
+                                        Thread.sleep(sleep_time);
+                                    }
                                 }
                             }
                         } else {
                             out.print(line + "\n\n");
                             out.flush();
                         }
-                    } catch (InterruptedException e) {
+                    } catch (JSONException | InterruptedException e) {
                         log.error(" A error occur......", e);
                         throw new RuntimeException(e);
                     }

@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * @author Yangyang
  * @create 2024-04-26 11:17
@@ -12,12 +14,12 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@JSONType(orders={"id","model","object","choice","created"})
+@JSONType(orders={"id","model","object","choices","created"})
 public class streamResponse {
     private String id;
     private String model;
     private String object;
-    private Choice choice;
+    private List<Choice> choices;
     private long created;
 
 
@@ -35,7 +37,7 @@ public class streamResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Delta {
+        private static String role = "assistant";
         private String content;
-
     }
 }
