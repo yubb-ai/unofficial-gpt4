@@ -18,7 +18,7 @@ public class streamResponse {
     private String model;
     private String object;
     private Choice choice;
-    private String created;
+    private long created;
 
 
     @Data
