@@ -969,7 +969,7 @@ public class ChatController {
                         }
                     } else {
                         // 非流式输出
-                        outPutEmbeddings(response, resp);
+                        outPutEmbeddings(response, resp, apiKey);
                     }
                 }
                 return null;
@@ -1062,7 +1062,7 @@ public class ChatController {
                         }
                     } else {
                         // 非流式输出
-                        outPutEmbeddings(response, resp);
+                        outPutEmbeddings(response, resp, apiKey);
                     }
                 }
                 return null;
@@ -1141,7 +1141,7 @@ public class ChatController {
                         }
                     } else {
                         // 非流式输出
-                        outPutEmbeddings(response, resp);
+                        outPutEmbeddings(response, resp, apiKey);
                     }
                 }
                 return null;
@@ -1171,7 +1171,7 @@ public class ChatController {
                     return new ResponseEntity<>(Result.error("APIKey is wrong Or your network is wrong"), HttpStatus.UNAUTHORIZED);
                 } else {
                     // 非流式输出
-                    outPutEmbeddings(response, resp);
+                    outPutEmbeddings(response, resp, apiKey);
                 }
             }
             return null;
@@ -1475,7 +1475,7 @@ public class ChatController {
      * @param response
      * @param resp
      */
-    private void outPutEmbeddings(HttpServletResponse response, Response resp) {
+    private void outPutEmbeddings(HttpServletResponse response, Response resp, String apiKey) {
         try {
             response.setContentType("application/json; charset=utf-8");
             OutputStream out = new BufferedOutputStream(response.getOutputStream());
@@ -1487,6 +1487,9 @@ public class ChatController {
                 out.write(buffer, 0, bytesRead);
                 out.flush();
             }
+            log.info("请求密钥：" + apiKey + "，vscode_version：" + systemSetting.getVscode_version() +
+                    "，copilot_chat_version：" + systemSetting.getCopilot_chat_version()
+                    + "，响应：" + resp);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
