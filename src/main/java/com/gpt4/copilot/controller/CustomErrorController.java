@@ -25,10 +25,10 @@ public class CustomErrorController implements ErrorController {
                 "    <title>Document</title>\n" +
                 "</head>\n" +
                 "<body>\n" +
-                "    <p>Thanks you use gpt4-copilot-java-0.2.6</p>\n" +
+                "    <p>Thanks you use gpt4-copilot-java-0.2.7</p>\n" +
                 "    <p><a href=\"https://apifox.com/apidoc/shared-4301e565-a8df-48a0-85a5-bda2c4c3965a\">详细使用文档</a></p>\n" +
                 "    <p><a href=\"https://github.com/Yanyutin753/unofficial-gpt4-api\">项目地址</a></p>\n" +
                 "</body>\n" +
-                "</html>\n", HttpStatus.OK);
+                "</html>\n", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
