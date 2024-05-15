@@ -66,6 +66,7 @@ public class Conversation implements Serializable {
      */
     @NonNull
     private List<Message> messages;
+
     @Builder.Default
     private String model = "gpt-3.5-turbo";
 

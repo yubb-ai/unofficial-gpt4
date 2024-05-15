@@ -145,7 +145,7 @@ public class ChatController {
             machineIdList = new ConcurrentHashMap<>();
             setSystemSetting(selectSetting());
             setExecutor(systemSetting.getMaxPoolSize());
-            log.info("服务启动了最大线程数为"+systemSetting.getMaxPoolSize()+"的线程池");
+            log.info("服务启动了最大线程数为" + systemSetting.getMaxPoolSize() + "的线程池");
             log.info(loadData());
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -277,7 +277,7 @@ public class ChatController {
             Integer oneCopilotLimit = getValueOrDefault(jsonObject, "one_copilot_limit", 30, "config.json没有新增one_copilot_limit参数,现已增加！");
             Integer oneCoCopilotLimit = getValueOrDefault(jsonObject, "one_coCopilot_limit", 30, "config.json没有新增one_coCopilot_limit参数,现已增加！");
             Integer oneSelfCopilotLimit = getValueOrDefault(jsonObject, "one_selfCopilot_limit", 30, "config.json没有新增one_selfCopilot_limit参数,现已增加！");
-
+            Integer max_tokens = getValueOrDefault(jsonObject, "max_tokens", 32, "config.json没有新增max_tokens参数,现已增加！");
             // 将修改后的 JSONObject 转换为格式化的 JSON 字符串
             String updatedJson = com.alibaba.fastjson.JSON.toJSONString(jsonObject, SerializerFeature.PrettyFormat);
             Files.write(Paths.get(parent), updatedJson.getBytes());
@@ -295,6 +295,7 @@ public class ChatController {
             config.setOne_coCopilot_limit(oneCoCopilotLimit);
             config.setOne_selfCopilot_limit(oneSelfCopilotLimit);
             config.setGpt4_prompt(gpt4Prompt);
+            config.setMax_tokens(max_tokens);
 
             return config;
         } catch (Exception e) {
@@ -687,7 +688,7 @@ public class ChatController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Request body is missing or not in JSON format");
         }
         long tokens = conversation.tokens();
-        if (tokens > 32 * 1024) {
+        if (tokens > systemSetting.getMax_tokens() * 1024) {
             log.error("Thread ID: " + Thread.currentThread().getId() + "请求密钥：" + apiKey + "，本次请求tokens is too long and over 32K: " + tokens);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Message is too long and over 32K");
         } else if (tokens <= 0) {
@@ -1401,11 +1402,9 @@ public class ChatController {
                                     // 使用stream形式适应List
                                     List<StreamResponse.Choice> choices = Stream.of(new StreamResponse.Choice(0, new StreamResponse.Delta(content), null)).collect(Collectors.toList());
                                     StreamResponse streamResponse = new StreamResponse(chat_message_id, model, "chat.completion.chunk", choices, timestamp);
-                                    StringBuilder stringBuilder = new StringBuilder();
-                                    stringBuilder.append("data: ");
-                                    stringBuilder.append(com.alibaba.fastjson.JSONObject.toJSONString(streamResponse));
-                                    stringBuilder.append("\n\n");
-                                    String tmpRes = stringBuilder.toString();
+                                    String tmpRes = "data: " +
+                                            com.alibaba.fastjson.JSONObject.toJSONString(streamResponse) +
+                                            "\n\n";
 
                                     out.print(tmpRes);
                                     out.flush();

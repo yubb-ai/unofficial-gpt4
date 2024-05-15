@@ -92,6 +92,7 @@ public class copilotApplication {
             getValueOrDefault(jsonObject, "one_copilot_limit", 30, "config.json没有新增one_copilot_limit参数,现已增加！");
             getValueOrDefault(jsonObject, "one_coCopilot_limit", 30, "config.json没有新增one_coCopilot_limit参数,现已增加！");
             getValueOrDefault(jsonObject, "one_selfCopilot_limit", 30, "config.json没有新增one_selfCopilot_limit参数,现已增加！");
+            getValueOrDefault(jsonObject, "max_tokens", 32, "config.json没有新增max_tokens参数,现已增加！");
 
             // 将修改后的 JSONObject 转换为格式化的 JSON 字符串
             String updatedJson = com.alibaba.fastjson.JSON.toJSONString(jsonObject, SerializerFeature.PrettyFormat);
@@ -296,6 +297,7 @@ public class copilotApplication {
         System.out.println("one_copilot_limit：" + ChatController.getSystemSetting().getOne_copilot_limit());
         System.out.println("one_coCopilot_limit：" + ChatController.getSystemSetting().getOne_coCopilot_limit());
         System.out.println("one_selfCopilot_limit：" + ChatController.getSystemSetting().getOne_selfCopilot_limit());
+        System.out.println("max_tokens：" + ChatController.getSystemSetting().getMax_tokens());
         System.out.println("gpt4-copilot-java 初始化接口成功！");
         System.out.println("======================================================");
         System.out.println("******原神gpt4-copilot-java v0.2.7启动成功******");

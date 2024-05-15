@@ -11,5 +11,6 @@
 	"one_coCopilot_limit":30,
 	"one_selfCopilot_limit":30,
 	"serverPort":8080,
+	"max_tokens":32,
 	"prefix":"/"
 }

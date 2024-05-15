@@ -75,4 +75,9 @@ public class SystemSetting {
      */
     private Integer one_selfCopilot_limit;
 
+    /**
+     * max_tokens
+     */
+    private Integer max_tokens;
+
 }
